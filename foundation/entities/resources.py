@@ -1,3 +1,9 @@
+'''
+Author: Shiwei Zhao
+Date: 2023-08-18 10:45:20
+FilePath: \mmo-economist\foundation\entities\resources.py
+Copyright (c) 2023 by NetEase, Inc., All Rights Reserved.
+'''
 # Copyright (c) 2020, salesforce.com, inc.
 # All rights reserved.
 # SPDX-License-Identifier: BSD-3-Clause
@@ -68,7 +74,7 @@ class Token(Resource):
 
 @resource_registry.add
 class Currency(Resource):
-    """Exp resource. blue. uncollectible. untradable"""
+    """Currency resource. blue. uncollectible. untradable"""
     name = "Currency"
     color = np.array([0, 0, 255]) / 255.0
     collectible = False
