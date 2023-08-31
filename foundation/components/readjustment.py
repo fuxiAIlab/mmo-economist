@@ -114,10 +114,23 @@ class LaunchReadjustment(BaseComponent):
         obs[self.world.planner.idx] = dict(
             is_adjustment_day=is_adjustment_day,
             is_first_day=is_first_day,
-            adjustment_phase=adjustment_phase,
-            last_adjustment=self._last_launch_adjustment,
-            curr_adjustment=self._curr_launch_adjustment
+            adjustment_phase=adjustment_phase
         )
+
+        obs[self.world.planner.idx].update(
+            {
+                'last_adjustment_' + str(resource): self._last_launch_adjustment[resource]
+                for resource in self.required_entities
+            }
+        )
+
+        obs[self.world.planner.idx].update(
+            {
+                'curr_adjustment_' + str(resource): self._curr_launch_adjustment[resource]
+                for resource in self.required_entities
+            }
+        )
+
 
         for agent in self.world.agents:
             i = agent.idx

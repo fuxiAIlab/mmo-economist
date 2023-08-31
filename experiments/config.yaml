@@ -26,6 +26,12 @@ env:
       max_num_orders: 5
       order_duration: 50
       order_labor: 1.0
+  - LaunchReadjustment: 
+      is_biadjustment: True
+      adjustment_period: 50
+      adjustment_rate_max: 0.3 
+      adjustment_rate_min: 0.0 
+      adjustment_rate_bin: 0.1
   isoelastic_eta: 0.23
   energy_cost: 0.21
   energy_warmup_constant: 10000
@@ -40,7 +46,7 @@ env:
   - 30
   - 30
   n_agents: 10
-  planner_gets_spatial_info: false
+  planner_gets_spatial_info: true 
   full_observability: false
   player_observation_range: 5
   starting_player_token: 0
@@ -53,6 +59,7 @@ env:
     Mat: 100
     Token: 80 
   normal_wear_and_tear_rate: 0.05
+  adjustemt_type: planner
 general:
   ckpt_frequency_steps: 750000
   cpus: 6
