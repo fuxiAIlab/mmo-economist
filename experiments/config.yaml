@@ -51,14 +51,15 @@ env:
   player_observation_range: 5
   starting_player_token: 0
   starting_player_currency: 100
-  player_utility_monetary_cost_dist: pareto 
-  player_utility_nonmonetary_cost_dist: normal
+  player_monetary_cost_dist: pareto 
+  player_nonmonetary_cost_dist: normal
   player_utility_income_fxrate: 1.0
   base_launch_plan:
     Exp: 100
     Mat: 100
     Token: 80 
   normal_wear_and_tear_rate: 0.05
+  timesteps_for_force_refresh_launch: 1000
   adjustemt_type: planner
 general:
   ckpt_frequency_steps: 750000

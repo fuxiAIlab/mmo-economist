@@ -15,15 +15,21 @@ class Shop(BaseComponent):
     required_entities = ["Exp", "Mat", "Token", "Labor"]
     agent_subclasses = ["BasicPlayer"]
 
-    def __init__(
-        self,
-        *base_component_args,
-        shop_labor=1.0,
-        **base_component_kwargs
-    ):
+    def __init__(self,
+                 *base_component_args,
+                 shop_labor=1.0,
+                 **base_component_kwargs):
         super().__init__(*base_component_args, **base_component_kwargs)
 
         self.commodities = {"Exp": {"Token": 15}, "Mat": {"Token": 15}}
+        maxes = dict()
+        for _, x in self.commodities.items():
+            for k, v in x.items():
+                if k in maxes.keys():
+                    maxes[k].append(v)
+                else:
+                    maxes[k] = [v]
+        self.max_prices = {k: max(v) for k, v in maxes.items()}
         self.shop_labor = float(shop_labor)
         assert self.shop_labor >= 0
 
@@ -60,11 +66,13 @@ class Shop(BaseComponent):
         if agent_cls_name == "BasicPlayer":
             state = {}
             for commodity in self.commodities.keys():
-                state.update({"shop_"+str(commodity)+"_income": float(1.0)})
                 state.update(
-                    {"shop_"+str(commodity)+"_cost_"+str(resource): float(cost)
-                     for resource, cost in self.commodities[commodity].items()}
-                )
+                    {"shop_" + str(commodity) + "_income": float(1.0)})
+                state.update({
+                    "shop_" + str(commodity) + "_cost_" + str(resource):
+                    float(cost) / self.max_prices[resource]
+                    for resource, cost in self.commodities[commodity].items()
+                })
             return state
         raise NotImplementedError
 
@@ -101,16 +109,14 @@ class Shop(BaseComponent):
                     # Incur the labor cost for shopping
                     agent.state["endogenous"]["Labor"] += self.shop_labor
 
-                    shop.append(
-                        {
-                            "shoper": agent.idx,
-                            "loc": np.array(agent.loc),
-                            "commodity": commodity,
-                            "income": float(1),
-                            'labor': self.shop_labor,
-                            'cost': self.commodities[commodity]
-                        }
-                    )
+                    shop.append({
+                        "shoper": agent.idx,
+                        "loc": np.array(agent.loc),
+                        "commodity": commodity,
+                        "income": float(1),
+                        'labor': self.shop_labor,
+                        'cost': self.commodities[commodity]
+                    })
             else:
                 raise ValueError
 
@@ -121,16 +127,18 @@ class Shop(BaseComponent):
         See base_component.py for detailed description.
         """
         obs_dict = dict()
-        for agent in self.world.agents:
-            for commodity in self.commodities.keys():
-                obs_dict[agent.idx] = {
-                    "shop_"+str(commodity)+"_income": float(1.0)
-                }
 
+        for agent in self.world.agents:
+            obs_dict[agent.idx] = dict()
+            for commodity in self.commodities.keys():
                 obs_dict[agent.idx].update(
-                    {"shop_"+str(commodity)+"_cost_"+str(resource): float(cost)
-                     for resource, cost in self.commodities[commodity].items()}
-                )
+                    {"shop_" + str(commodity) + "_income": float(1.0)})
+
+                obs_dict[agent.idx].update({
+                    "shop_" + str(commodity) + "_cost_" + str(resource):
+                    float(cost) / self.max_prices[resource]
+                    for resource, cost in self.commodities[commodity].items()
+                })
         return obs_dict
 
     def generate_masks(self, completions=0):
@@ -141,10 +149,10 @@ class Shop(BaseComponent):
         # Mobile agents' shop action is masked if they cannot shop with their
         # current location and/or endowment
         for agent in self.world.agents:
-            masks[agent.idx] = np.array(
-                [self.agent_can_shop(agent, commodity)
-                 for commodity in self.commodities.keys()]
-            )
+            masks[agent.idx] = np.array([
+                self.agent_can_shop(agent, commodity)
+                for commodity in self.commodities.keys()
+            ])
 
         return masks
 
@@ -181,11 +189,12 @@ class Shop(BaseComponent):
         """
         for agent in self.world.agents:
             for commodity in self.commodities.keys():
-                agent.state["shop_"+str(commodity)+"_income"] = float(1)
-                agent.state.update(
-                    {"shop_"+str(commodity)+"_cost_"+str(resource): float(cost)
-                     for resource, cost in self.commodities[commodity].items()}
-                )
+                agent.state["shop_" + str(commodity) + "_income"] = float(1)
+                agent.state.update({
+                    "shop_" + str(commodity) + "_cost_" + str(resource):
+                    float(cost) / self.max_prices[resource]
+                    for resource, cost in self.commodities[commodity].items()
+                })
 
         self.shops = []
 

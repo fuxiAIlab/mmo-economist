@@ -7,7 +7,6 @@
 from copy import deepcopy
 
 import numpy as np
-from scipy import signal
 
 from foundation.base.base_env import BaseEnvironment, scenario_registry, resource_registry
 from foundation.scenarios.utils import rewards, social_metrics
@@ -31,6 +30,7 @@ class Sinkhole(BaseEnvironment):
             "Mat": 5,
             "Token": 5
         },
+        timesteps_for_force_refresh_launch=1000,
         adjustemt_type='none',
         normal_wear_and_tear_rate=0.05,
         checker_source_blocks=False,
@@ -40,8 +40,8 @@ class Sinkhole(BaseEnvironment):
         energy_cost=0.21,
         energy_warmup_constant=0,
         energy_warmup_method="decay",
-        player_utility_monetary_cost_dist='pareto',
-        player_utility_nonmonetary_cost_dist='normal',
+        player_monetary_cost_dist='pareto',
+        player_nonmonetary_cost_dist='normal',
         player_utility_income_fxrate=0.1,
         mixing_weight_gini_vs_coin=0.0,
         **base_env_kwargs
@@ -122,38 +122,47 @@ class Sinkhole(BaseEnvironment):
             agent.idx: 0 for agent in self.all_agents}
         self.curr_optimization_metric = {
             agent.idx: 0 for agent in self.all_agents}
+    
+        self._timesteps_for_force_refresh_launch = timesteps_for_force_refresh_launch
 
         # Initialize the agent's monetary and nonmonetary utility cost sensitivity
-        if player_utility_monetary_cost_dist.lower() == 'pareto':
+        if player_monetary_cost_dist.lower() == 'pareto':
             pareto_samples = np.random.pareto(4, size=(100000, self.n_agents))
             clipped_samples = np.minimum(1, pareto_samples)
             sorted_clipped_samples = np.sort(clipped_samples, axis=1)
             average_ranked_samples = sorted_clipped_samples.mean(axis=0)
             np.random.shuffle(average_ranked_samples)
-            self._player_utility_monetary_cost_sensitivities = 1-average_ranked_samples
-        elif player_utility_monetary_cost_dist.lower() == 'normal':
+            self._player_monetary_cost_sensitivities = 1-average_ranked_samples
+        elif player_monetary_cost_dist.lower() == 'normal':
             normal_samples = np.random.normal((1+0)/2, (1-0)/3, self.n_agents)
-            self._player_utility_monetary_cost_sensitivities = np.clip(
+            self._player_monetary_cost_sensitivities = np.clip(
                 normal_samples, 0, 1)
         else:
             raise NotImplementedError
 
-        if player_utility_nonmonetary_cost_dist.lower() == 'pareto':
+        if player_nonmonetary_cost_dist.lower() == 'pareto':
             pareto_samples = np.random.pareto(4, size=(100000, self.n_agents))
             clipped_samples = np.minimum(1, pareto_samples)
             sorted_clipped_samples = np.sort(clipped_samples, axis=1)
             average_ranked_samples = sorted_clipped_samples.mean(axis=0)
             np.random.shuffle(average_ranked_samples)
-            self._player_utility_nonmonetary_cost_sensitivities = 1-average_ranked_samples
-        elif player_utility_nonmonetary_cost_dist.lower() == 'normal':
+            self._player_nonmonetary_cost_sensitivities = 1-average_ranked_samples
+        elif player_nonmonetary_cost_dist.lower() == 'normal':
             normal_samples = np.random.normal((1+0)/2, (1-0)/3, self.n_agents)
-            self._player_utility_nonmonetary_cost_sensitivities = np.clip(
+            self._player_nonmonetary_cost_sensitivities = np.clip(
                 normal_samples, 0, 1)
         else:
             raise NotImplementedError
+
+        for agent in self.world.agents:
+            agent.set_cost_sensitivity(
+                monetary_cost_sensitivity=self._player_monetary_cost_sensitivities[agent.idx],
+                nonmonetary_cost_sensitivity=self._player_nonmonetary_cost_sensitivities[agent.idx]
+            )
 
         self._player_utility_income_fxrate = player_utility_income_fxrate
         assert isinstance(adjustemt_type, str)
+
         self._adjustemt_type = adjustemt_type.lower()
         assert self._adjustemt_type in ['none', 'planner']
 
@@ -240,10 +249,8 @@ class Sinkhole(BaseEnvironment):
                 isoelastic_eta=self.isoelastic_eta,
                 labor_coefficient=self.energy_weight * self.energy_cost,
                 income_exchange_rate=self._player_utility_income_fxrate,
-                monetary_cost_sensitivity=self._player_utility_monetary_cost_sensitivities[
-                    agent.idx],
-                nonmonetary_cost_sensitivity=self._player_utility_nonmonetary_cost_sensitivities[
-                    agent.idx]
+                monetary_cost_sensitivity=agent.monetary_cost_sensitivity,
+                nonmonetary_cost_sensitivity=agent.nonmonetary_cost_sensitivity
             )
 
         # (for the planner)
@@ -354,7 +361,8 @@ class Sinkhole(BaseEnvironment):
         total_launch = sum([v for k, v in self._launch_plan.items()])
 
         # 投放全部被获取 or 超过一定steps 开始新的投放周期
-        if np.sum(all_resource_map) <= max(1, self._normal_wear_and_tear_rate * total_launch) or self._steps_in_duration >= 1000:
+        if np.sum(all_resource_map) <= max(1, self._normal_wear_and_tear_rate * total_launch) or \
+            self._steps_in_duration >= self._timesteps_for_force_refresh_launch:
             self._durations += 1
             self._steps_in_duration = 0
             self._last_launch_plan = deepcopy(self._curr_launch_plan)
@@ -412,10 +420,43 @@ class Sinkhole(BaseEnvironment):
             for agent in self.world.agents
         }
 
+        agent_escs = {
+            str(agent.idx): {
+                "escrow-" + k: v * self.inv_scale for k, v in agent.escrow.items()
+            }
+            for agent in self.world.agents
+        }
+
+        agent_ends = {
+            str(agent.idx): {
+                "endogenous-" + k: v * self.inv_scale *0.1 for k, v in agent.endogenous.items()
+            }
+            for agent in self.world.agents
+        }
+
+        agent_util = {
+            str(agent.idx): {
+                "utility-monetary_cost_sensitivity": agent.monetary_cost_sensitivity,
+                "utility-nonmonetary_cost_sensitivity": agent.nonmonetary_cost_sensitivity
+            }
+            for agent in self.world.agents
+        }
+
         obs[self.world.planner.idx] = {
             "inventory-" + k: v * self.inv_scale
             for k, v in self.world.planner.inventory.items()
         }
+
+        obs[self.world.planner.idx].update({
+            "escrow-" + k: v * self.inv_scale
+            for k, v in self.world.planner.escrow.items()
+        })
+
+        obs[self.world.planner.idx].update({
+            "endogenous-" + k: v * self.inv_scale *0.1
+            for k, v in self.world.planner.endogenous.items()
+        })
+
         if self._planner_gets_spatial_info:
             obs[self.world.planner.idx].update(
                 dict(map=curr_map, idx_map=agent_idx_maps)
@@ -429,6 +470,9 @@ class Sinkhole(BaseEnvironment):
                 sidx = str(agent.idx)
                 obs[sidx] = {"map": curr_map, "idx_map": my_map}
                 obs[sidx].update(agent_invs[sidx])
+                obs[sidx].update(agent_escs[sidx])
+                obs[sidx].update(agent_ends[sidx])
+                obs[sidx].update(agent_util[sidx])
 
         # Mobile agents only see within a window around their position
         else:
@@ -466,10 +510,15 @@ class Sinkhole(BaseEnvironment):
                 obs[sidx] = {"map": visible_map, "idx_map": visible_idx}
                 obs[sidx].update(agent_locs[sidx])
                 obs[sidx].update(agent_invs[sidx])
+                obs[sidx].update(agent_escs[sidx])
+                obs[sidx].update(agent_ends[sidx])
+                obs[sidx].update(agent_util[sidx])
 
                 # Agent-wise planner info (gets crunched into the planner obs in the
                 # base scenario code)
                 obs["p" + sidx] = agent_invs[sidx]
+                obs["p" + sidx].update(agent_escs[sidx])
+                obs["p" + sidx].update(agent_ends[sidx])
                 if self._planner_gets_spatial_info:
                     obs["p" + sidx].update(agent_locs[sidx])
 

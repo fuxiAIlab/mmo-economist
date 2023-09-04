@@ -133,7 +133,6 @@ class LaunchReadjustment(BaseComponent):
 
 
         for agent in self.world.agents:
-            i = agent.idx
 
             obs[str(agent.idx)] = dict(
                 is_adjustment_day=is_adjustment_day,
