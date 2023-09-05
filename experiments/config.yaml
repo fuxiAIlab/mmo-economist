@@ -28,7 +28,7 @@ env:
       order_labor: 1.0
   - LaunchReadjustment: 
       is_biadjustment: True
-      adjustment_period: 50
+      adjustment_period: 500
       adjustment_rate_max: 0.3 
       adjustment_rate_min: 0.0 
       adjustment_rate_bin: 0.1

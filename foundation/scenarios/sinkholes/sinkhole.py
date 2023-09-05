@@ -363,16 +363,18 @@ class Sinkhole(BaseEnvironment):
         # 投放全部被获取 or 超过一定steps 开始新的投放周期
         if np.sum(all_resource_map) <= max(1, self._normal_wear_and_tear_rate * total_launch) or \
             self._steps_in_duration >= self._timesteps_for_force_refresh_launch:
+                
             self._durations += 1
             self._steps_in_duration = 0
             self._last_launch_plan = deepcopy(self._curr_launch_plan)
             if self._adjustemt_type == 'planner':
                 self._curr_launch_plan = {k: int(self._base_launch_plan[k]*v) for k, v in self.get_component(
-                    "LaunchReadjustment").launch_adjustment.items()}
+                        "LaunchReadjustment").launch_adjustment.items()}
             elif self._adjustemt_type == 'none':
                 pass
             else:
-                pass
+                raise NotImplementedError
+            self.get_component("LaunchReadjustment").start_new_launch_adjustment()
             self.reset_starting_layout()
 
     def generate_observations(self):
