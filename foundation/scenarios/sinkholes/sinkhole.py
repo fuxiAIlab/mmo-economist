@@ -521,6 +521,7 @@ class Sinkhole(BaseEnvironment):
                 obs["p" + sidx] = agent_invs[sidx]
                 obs["p" + sidx].update(agent_escs[sidx])
                 obs["p" + sidx].update(agent_ends[sidx])
+                obs["p" + sidx].update(agent_util[sidx])
                 if self._planner_gets_spatial_info:
                     obs["p" + sidx].update(agent_locs[sidx])
 
