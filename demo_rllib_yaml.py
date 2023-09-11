@@ -68,8 +68,22 @@ trainer_config.update(
 )
 print('test1')
 trainer = PPOTrainer(env=RLlibEnvWrapper, config=trainer_config)
-NUM_ITERS = 200
+#trainer._restore('tmp_3.4641548739493224/checkpoint_9/checkpoint-9')
+#trainer._restore('ckpt_a/tmp_37.74633408773801/checkpoint_158/checkpoint-158')
+trainer._restore('ckpt_a/tmp_39.47267792436246/checkpoint_193/checkpoint-193')
+#trainer._restore('tmp_6.800040908919548/checkpoint_1049/checkpoint-1049')
+NUM_ITERS = 1500
+cur_best=0
 for iteration in range(NUM_ITERS):
     print(f'********** Iter : {iteration} **********')
     result = trainer.train()
-    print(f'''episode_reward_mean: {result.get('episode_reward_mean')}''')
+    if 'p' in result['policy_reward_mean'].keys():
+        if result['policy_reward_mean']['p']>cur_best:
+            # if result.get('episode_reward_mean')>cur_best:
+            cur_best= result['policy_reward_mean']['p'] #result.get('episode_reward_mean')
+            trainer.save(f'./ckpt_mask/rew_{round(cur_best,4)}')
+        print(f"episode_reward_mean: {result.get('episode_reward_mean')}, "
+              f"a_rew:{result['policy_reward_mean']['a']} ",
+              f" p_rew:{result['policy_reward_mean']['p']}")
+    else:
+        print(f"episode_reward_mean: {result.get('episode_reward_mean')}")

@@ -62,13 +62,14 @@ env:
   timesteps_for_force_refresh_launch: 1000
   adjustemt_type: planner
 general:
-  ckpt_frequency_steps: 750000
-  cpus: 6
-  episodes: 10
-  gpus: 0
-  restore_tf_weights_agents: ''
-  restore_tf_weights_planner: ''
-  train_planner: false
+# not used, deprecated config        
+#  ckpt_frequency_steps: 750000
+#  cpus: 6
+#  episodes: 10
+#  gpus: 0
+#  restore_tf_weights_agents: ''
+#  restore_tf_weights_planner: ''
+  train_planner: true #false
 agent_policy:
   clip_param: 0.3
   entropy_coeff: 0.025
@@ -106,8 +107,14 @@ planner_policy:
   lr: 0.0003
   lr_schedule: null
   model:
-    custom_model: random
-    custom_options: {}
+    custom_model: keras_conv_lstm
+    custom_options:
+      fc_dim: 256
+      idx_emb_dim: 4
+      input_emb_vocab: 100
+      lstm_cell_size: 256
+      num_conv: 2
+      num_fc: 2
     max_seq_len: 25
   use_gae: true
   vf_clip_param: 50.0
@@ -122,11 +129,11 @@ trainer:
   metrics_smoothing_episodes: null
   multiagent: null
   no_done_at_end: false
-  num_envs_per_worker: 2
+  num_envs_per_worker: 1
   num_gpus: 0
   num_gpus_per_worker: 0
   num_sgd_iter: 1
-  num_workers: 2
+  num_workers: 8 
   observation_filter: NoFilter
   rollout_fragment_length: 200
   seed: null
