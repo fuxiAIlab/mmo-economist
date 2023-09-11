@@ -431,7 +431,7 @@ class Sinkhole(BaseEnvironment):
 
         agent_ends = {
             str(agent.idx): {
-                "endogenous-" + k: v * self.inv_scale *0.1 for k, v in agent.endogenous.items()
+                "endogenous-" + k: v * self.end_scale for k, v in agent.endogenous.items()
             }
             for agent in self.world.agents
         }
@@ -455,7 +455,7 @@ class Sinkhole(BaseEnvironment):
         })
 
         obs[self.world.planner.idx].update({
-            "endogenous-" + k: v * self.inv_scale *0.1
+            "endogenous-" + k: v * self.end_scale
             for k, v in self.world.planner.endogenous.items()
         })
 

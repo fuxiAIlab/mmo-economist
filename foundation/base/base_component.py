@@ -60,7 +60,7 @@ class BaseComponent(ABC):
     # The (non-agent) game entities that are expected to be in play
     required_entities = None  # Replace with list or tuple (can be empty)
 
-    def __init__(self, world, episode_length, inventory_scale=1):
+    def __init__(self, world, episode_length, inventory_scale=1, endogenous_scale=1):
         assert self.name
 
         assert isinstance(self.agent_subclasses, (tuple, list))
@@ -90,6 +90,7 @@ class BaseComponent(ABC):
         assert self.timescale >= 1
 
         self._inventory_scale = float(inventory_scale)
+        self._endogenous_scale = float(endogenous_scale)
 
     @property
     def world(self):
@@ -121,6 +122,18 @@ class BaseComponent(ABC):
         """
         return self._inventory_scale
 
+    @property
+    def end_scale(self):
+        """
+        Value by which to scale quantities when generating observations.
+
+        Note: This property is set by the environment during construction and
+        allows each component instance within the environment to refer to the same
+        scaling value. How the value is actually used depends on the implementation
+        of get_observations().
+        """
+        return self._endogenous_scale
+    
     # @property
     # def shorthand(self):
     #     """The shorthand name, or name if no component_type is defined."""

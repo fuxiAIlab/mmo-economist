@@ -152,7 +152,7 @@ class Recharge(BaseComponent):
         obs_dict = dict()
         for agent in self.world.agents:
             obs_dict[agent.idx] = {
-                "recharge_income": agent.state["recharge_income"] / self.recharge_income
+                "recharge_income": agent.state["recharge_income"] * self.inv_scale 
             }
 
         return obs_dict

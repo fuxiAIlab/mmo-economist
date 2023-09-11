@@ -21,7 +21,7 @@ class Shop(BaseComponent):
                  **base_component_kwargs):
         super().__init__(*base_component_args, **base_component_kwargs)
 
-        self.commodities = {"Exp": {"Token": 15}, "Mat": {"Token": 15}}
+        self.commodities = {"Exp": {"Token": 10}, "Mat": {"Token": 10}}
         maxes = dict()
         for _, x in self.commodities.items():
             for k, v in x.items():
@@ -70,7 +70,7 @@ class Shop(BaseComponent):
                     {"shop_" + str(commodity) + "_income": float(1.0)})
                 state.update({
                     "shop_" + str(commodity) + "_cost_" + str(resource):
-                    float(cost) / self.max_prices[resource]
+                    float(cost)
                     for resource, cost in self.commodities[commodity].items()
                 })
             return state
@@ -131,12 +131,14 @@ class Shop(BaseComponent):
         for agent in self.world.agents:
             obs_dict[agent.idx] = dict()
             for commodity in self.commodities.keys():
-                obs_dict[agent.idx].update(
-                    {"shop_" + str(commodity) + "_income": float(1.0)})
+                obs_dict[agent.idx].update({
+                    "shop_" + str(commodity) + "_income":
+                    float(1.0) * self.inv_scale
+                })
 
                 obs_dict[agent.idx].update({
                     "shop_" + str(commodity) + "_cost_" + str(resource):
-                    float(cost) / self.max_prices[resource]
+                    float(cost) * self.inv_scale
                     for resource, cost in self.commodities[commodity].items()
                 })
         return obs_dict
@@ -192,7 +194,7 @@ class Shop(BaseComponent):
                 agent.state["shop_" + str(commodity) + "_income"] = float(1)
                 agent.state.update({
                     "shop_" + str(commodity) + "_cost_" + str(resource):
-                    float(cost) / self.max_prices[resource]
+                    float(cost)
                     for resource, cost in self.commodities[commodity].items()
                 })
 

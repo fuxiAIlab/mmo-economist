@@ -102,7 +102,7 @@ class Upgrade(BaseComponent):
         if agent_cls_name not in self.agent_subclasses:
             return {}
         if agent_cls_name == "BasicPlayer":
-            return {"upgrade_income": float(self.upgrade_income), "upgrade_skill": 1}
+            return {"upgrade_income": float(self.upgrade_income), "upgrade_skill": float(1)}
         raise NotImplementedError
 
     def component_step(self):
@@ -167,7 +167,7 @@ class Upgrade(BaseComponent):
         obs_dict = dict()
         for agent in self.world.agents:
             obs_dict[agent.idx] = {
-                "upgrade_income": agent.state["upgrade_income"] / self.upgrade_income,
+                "upgrade_income": agent.state["upgrade_income"] * self.end_scale,
                 "upgrade_skill": self.sampled_skills[agent.idx],
             }
 
@@ -211,9 +211,6 @@ class Upgrade(BaseComponent):
         for a in world.agents:
             for k, v in upgrade_stats[a.idx].items():
                 out_dict["{}/{}".format(a.idx, k)] = v
-
-        # num_houses = np.sum(world.maps.get("House") > 0)
-        # out_dict["total_builds"] = num_houses
 
         return out_dict
 

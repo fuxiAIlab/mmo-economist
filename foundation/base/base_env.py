@@ -330,6 +330,7 @@ class BaseEnvironment(ABC):
                 self.world,
                 self._episode_length,
                 inventory_scale=self.inv_scale,
+                endogenous_scale=self.end_scale,
                 **component_kwargs
             )
             self._components.append(component_object)
@@ -391,6 +392,11 @@ class BaseEnvironment(ABC):
     def inv_scale(self):
         """Scale value to be used for inventory scaling. 1 if no scaling enabled."""
         return 0.01 if self._allow_observation_scaling else 1
+
+    @property
+    def end_scale(self):
+        """Scale value to be used for endogenous scaling. 1 if no scaling enabled."""
+        return 0.001 if self._allow_observation_scaling else 1
 
     @property
     def resources(self):

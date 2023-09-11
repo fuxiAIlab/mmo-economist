@@ -49,6 +49,7 @@ env:
   planner_gets_spatial_info: true 
   full_observability: false
   player_observation_range: 5
+  allow_observation_scaling: True
   starting_player_token: 0
   starting_player_currency: 100
   player_monetary_cost_dist: pareto 
@@ -59,7 +60,7 @@ env:
     Mat: 100
     Token: 80 
   normal_wear_and_tear_rate: 0.05
-  timesteps_for_force_refresh_launch: 1000
+  timesteps_for_force_refresh_launch: 500
   adjustemt_type: planner
 general:
 # not used, deprecated config        
