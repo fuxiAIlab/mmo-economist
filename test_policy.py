@@ -21,7 +21,7 @@ def generate_rollout_from_current_trainer_policy(
     for idx in range(num_dense_logs):
         planner_action = []
         planner_action_mask = []
-        productivity = []
+        profitability = []
         equality = []
 
         # Set initial states
@@ -57,7 +57,7 @@ def generate_rollout_from_current_trainer_policy(
             planner_action.append(actions['p'])
             planner_action_mask.append(obs['p']['action_mask'])
             metric=env_obj.env.scenario_metrics()
-            productivity.append(metric['social/productivity'])
+            profitability.append(metric['social/profitability'])
             equality.append(metric['social/equality'])
 
             obs, rew, done, info = env_obj.step(actions)
@@ -66,7 +66,7 @@ def generate_rollout_from_current_trainer_policy(
                 break
         dense_logs[idx] = env_obj.env.dense_log
         dense_logs[idx]['planner_action'] = planner_action
-        dense_logs[idx]['productivity'] = productivity
+        dense_logs[idx]['profitability'] = profitability
         dense_logs[idx]['equality'] = equality
 
     dense_logs['mon_sense'] =env_obj.env._player_monetary_cost_sensitivities

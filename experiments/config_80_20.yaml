@@ -12,12 +12,12 @@ env:
       collect_labor: 10.0
       skill_dist: none
   - Upgrade:
-      upgrade_income: 1.0
+      upgrade_income: 10.0
       upgrade_labor: 1.0
       payment_max_skill_multiplier: 1
       skill_dist: none
   - Recharge:
-      recharge_income: 10
+      recharge_income: 10.0
       recharge_labor: 1.0
   - Shop:
       shop_labor: 1.0
@@ -51,13 +51,13 @@ env:
   player_observation_range: 5
   allow_observation_scaling: true
   starting_player_token: 0
-  starting_player_currency: 100
+  starting_player_currency: 200
   player_monetary_cost_dist: pareto 
   player_nonmonetary_cost_dist: normal
   player_utility_income_fxrate: 1.0
   base_launch_plan:
-    Exp: 100
-    Mat: 100
+    Exp: 80
+    Mat: 80
     Token: 80 
   normal_wear_and_tear_rate: 0.05
   timesteps_for_force_refresh_launch: 500

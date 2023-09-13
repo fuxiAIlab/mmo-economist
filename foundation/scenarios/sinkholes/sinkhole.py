@@ -7,7 +7,7 @@
 from copy import deepcopy
 
 import numpy as np
-
+import random
 from foundation.base.base_env import BaseEnvironment, scenario_registry, resource_registry
 from foundation.scenarios.utils import rewards, social_metrics
 
@@ -16,36 +16,35 @@ from foundation.scenarios.utils import rewards, social_metrics
 class Sinkhole(BaseEnvironment):
     name = "scenarios/sinkhole"
     agent_subclasses = ["BasicPlayer", "BasicPlanner"]
-    required_entities = ["Exp", "Mat", "Token",
-                         "Currency", "Labor", "Capability"]
+    required_entities = [
+        "Exp", "Mat", "Token", "Currency", "Labor", "Capability"
+    ]
 
-    def __init__(
-        self,
-        *base_env_args,
-        planner_gets_spatial_info=True,
-        full_observability=False,
-        player_observation_range=5,
-        base_launch_plan={
-            "Exp": 5,
-            "Mat": 5,
-            "Token": 5
-        },
-        timesteps_for_force_refresh_launch=1000,
-        adjustemt_type='none',
-        normal_wear_and_tear_rate=0.05,
-        checker_source_blocks=False,
-        starting_player_token=0,
-        starting_player_currency=0,
-        isoelastic_eta=0.23,
-        energy_cost=0.21,
-        energy_warmup_constant=0,
-        energy_warmup_method="decay",
-        player_monetary_cost_dist='pareto',
-        player_nonmonetary_cost_dist='normal',
-        player_utility_income_fxrate=0.1,
-        mixing_weight_gini_vs_coin=0.0,
-        **base_env_kwargs
-    ):
+    def __init__(self,
+                 *base_env_args,
+                 planner_gets_spatial_info=True,
+                 full_observability=False,
+                 player_observation_range=5,
+                 base_launch_plan={
+                     "Exp": 5,
+                     "Mat": 5,
+                     "Token": 5
+                 },
+                 timesteps_for_force_refresh_launch=1000,
+                 adjustemt_type='none',
+                 normal_wear_and_tear_rate=0.05,
+                 checker_source_blocks=False,
+                 starting_player_token=0,
+                 starting_player_currency=200,
+                 isoelastic_eta=0.23,
+                 energy_cost=0.21,
+                 energy_warmup_constant=0,
+                 energy_warmup_method="decay",
+                 player_monetary_cost_dist='pareto',
+                 player_nonmonetary_cost_dist='normal',
+                 player_utility_income_fxrate=1.0,
+                 mixing_weight_gini_vs_coin=0.0,
+                 **base_env_kwargs):
         super().__init__(*base_env_args, **base_env_kwargs)
 
         # Whether agents receive spatial information in their observation tensor
@@ -54,16 +53,14 @@ class Sinkhole(BaseEnvironment):
         # Whether the (non-planner) agents can see the whole world map
         self._full_observability = bool(full_observability)
 
-        self._player_observation_range = int(
-            player_observation_range)
+        self._player_observation_range = int(player_observation_range)
 
         self._durations = 0
         self._steps_in_duration = 0
         self._checker_source_blocks = bool(checker_source_blocks)
         c, r = np.meshgrid(
-            np.arange(self.world_size[1]) % 2, np.arange(
-                self.world_size[0]) % 2
-        )
+            np.arange(self.world_size[1]) % 2,
+            np.arange(self.world_size[0]) % 2)
         self._checker_mask = (r + c) == 1
         m = 2 if self._checker_source_blocks else 1
 
@@ -117,12 +114,18 @@ class Sinkhole(BaseEnvironment):
 
         # Use this to calculate marginal changes and deliver that as reward
         self.init_optimization_metric = {
-            agent.idx: 0 for agent in self.all_agents}
+            agent.idx: 0
+            for agent in self.all_agents
+        }
         self.prev_optimization_metric = {
-            agent.idx: 0 for agent in self.all_agents}
+            agent.idx: 0
+            for agent in self.all_agents
+        }
         self.curr_optimization_metric = {
-            agent.idx: 0 for agent in self.all_agents}
-    
+            agent.idx: 0
+            for agent in self.all_agents
+        }
+
         self._timesteps_for_force_refresh_launch = timesteps_for_force_refresh_launch
 
         # Initialize the agent's monetary and nonmonetary utility cost sensitivity
@@ -132,9 +135,10 @@ class Sinkhole(BaseEnvironment):
             sorted_clipped_samples = np.sort(clipped_samples, axis=1)
             average_ranked_samples = sorted_clipped_samples.mean(axis=0)
             np.random.shuffle(average_ranked_samples)
-            self._player_monetary_cost_sensitivities = 1-average_ranked_samples
+            self._player_monetary_cost_sensitivities = 1 - average_ranked_samples
         elif player_monetary_cost_dist.lower() == 'normal':
-            normal_samples = np.random.normal((1+0)/2, (1-0)/3, self.n_agents)
+            normal_samples = np.random.normal((1 + 0) / 2, (1 - 0) / 3,
+                                              self.n_agents)
             self._player_monetary_cost_sensitivities = np.clip(
                 normal_samples, 0, 1)
         else:
@@ -146,9 +150,10 @@ class Sinkhole(BaseEnvironment):
             sorted_clipped_samples = np.sort(clipped_samples, axis=1)
             average_ranked_samples = sorted_clipped_samples.mean(axis=0)
             np.random.shuffle(average_ranked_samples)
-            self._player_nonmonetary_cost_sensitivities = 1-average_ranked_samples
+            self._player_nonmonetary_cost_sensitivities = 1 - average_ranked_samples
         elif player_nonmonetary_cost_dist.lower() == 'normal':
-            normal_samples = np.random.normal((1+0)/2, (1-0)/3, self.n_agents)
+            normal_samples = np.random.normal((1 + 0) / 2, (1 - 0) / 3,
+                                              self.n_agents)
             self._player_nonmonetary_cost_sensitivities = np.clip(
                 normal_samples, 0, 1)
         else:
@@ -156,15 +161,26 @@ class Sinkhole(BaseEnvironment):
 
         for agent in self.world.agents:
             agent.set_cost_sensitivity(
-                monetary_cost_sensitivity=self._player_monetary_cost_sensitivities[agent.idx],
-                nonmonetary_cost_sensitivity=self._player_nonmonetary_cost_sensitivities[agent.idx]
-            )
+                monetary_cost_sensitivity=self.
+                _player_monetary_cost_sensitivities[agent.idx],
+                nonmonetary_cost_sensitivity=self.
+                _player_nonmonetary_cost_sensitivities[agent.idx])
 
         self._player_utility_income_fxrate = player_utility_income_fxrate
         assert isinstance(adjustemt_type, str)
 
         self._adjustemt_type = adjustemt_type.lower()
-        assert self._adjustemt_type in ['none', 'planner']
+        assert self._adjustemt_type in [
+            'none', 'planner', 'fixed', 'greedy-equ', 'greedy-pro',
+            'random-asy', 'random-syn'
+        ]
+
+        self._metrics_for_timesteps = {'profitability': [], 'equality': []}
+        self._metrics_for_durations = {'profitability': [0.], 'equality': [0.]}
+        self._last_launch_adjustment = self.get_component(
+            "LaunchReadjustment").base_launch_adjustment
+        self._curr_launch_adjustment = self.get_component(
+            "LaunchReadjustment").base_launch_adjustment
 
     @property
     def base_launch_plan(self):
@@ -206,7 +222,7 @@ class Sinkhole(BaseEnvironment):
             v_[v[:, 0], v[:, 1]] = 1
             _source_maps[k] = v_
             self.world.maps.set(str(k), v_)
-            self.world.maps.set(str(k)+"SourceBlock", v_)
+            self.world.maps.set(str(k) + "SourceBlock", v_)
         return _source_maps
 
     @property
@@ -219,14 +235,12 @@ class Sinkhole(BaseEnvironment):
             return 1.0
 
         if self.energy_warmup_method == "decay":
-            return float(1.0 - np.exp(-self._completions / self.energy_warmup_constant))
+            return float(1.0 - np.exp(-self._completions /
+                                      self.energy_warmup_constant))
 
         if self.energy_warmup_method == "auto":
-            return float(
-                1.0
-                - np.exp(-self._auto_warmup_integrator /
-                         self.energy_warmup_constant)
-            )
+            return float(1.0 - np.exp(-self._auto_warmup_integrator /
+                                      self.energy_warmup_constant))
 
         raise NotImplementedError
 
@@ -241,30 +255,32 @@ class Sinkhole(BaseEnvironment):
         curr_optimization_metric = {}
         # (for agents)
         for agent in self.world.agents:
-            curr_optimization_metric[agent.idx] = rewards.isoelastic_utility_for_player(
-                income=agent.state["endogenous"]["Capability"],
-                monetary_cost=self.starting_player_currency -
-                agent.total_endowment("Currency"),
-                nonmonetary_cost=agent.state["endogenous"]["Labor"],
-                isoelastic_eta=self.isoelastic_eta,
-                labor_coefficient=self.energy_weight * self.energy_cost,
-                income_exchange_rate=self._player_utility_income_fxrate,
-                monetary_cost_sensitivity=agent.monetary_cost_sensitivity,
-                nonmonetary_cost_sensitivity=agent.nonmonetary_cost_sensitivity
-            )
+            curr_optimization_metric[
+                agent.idx] = rewards.isoelastic_utility_for_player(
+                    income=agent.state["endogenous"]["Capability"],
+                    monetary_cost=self.starting_player_currency -
+                    agent.total_endowment("Currency"),
+                    nonmonetary_cost=agent.state["endogenous"]["Labor"],
+                    isoelastic_eta=self.isoelastic_eta,
+                    labor_coefficient=self.energy_weight * self.energy_cost,
+                    income_exchange_rate=self._player_utility_income_fxrate,
+                    monetary_cost_sensitivity=agent.monetary_cost_sensitivity,
+                    nonmonetary_cost_sensitivity=agent.
+                    nonmonetary_cost_sensitivity)
 
         # (for the planner)
-        curr_optimization_metric[self.world.planner.idx] = rewards.utility_for_planner(
-            monetary_incomes=np.array(
-                [self.starting_player_currency - agent.total_endowment("Currency")
-                 for agent in self.world.agents]
-            ),
-            nonmonetary_incomes=np.array(
-                [agent.state["endogenous"]["Capability"]
-                 for agent in self.world.agents]
-            ),
-            equality_weight=1 - self.mixing_weight_gini_vs_coin
-        )
+        curr_optimization_metric[
+            self.world.planner.idx] = rewards.utility_for_planner(
+                monetary_incomes=np.array([
+                    self.starting_player_currency -
+                    agent.total_endowment("Currency")
+                    for agent in self.world.agents
+                ]),
+                nonmonetary_incomes=np.array([
+                    agent.state["endogenous"]["Capability"]
+                    for agent in self.world.agents
+                ]),
+                equality_weight=1 - self.mixing_weight_gini_vs_coin)
 
         return curr_optimization_metric
 
@@ -304,10 +320,12 @@ class Sinkhole(BaseEnvironment):
 
         # Clear everything for the planner
         self.world.planner.state["inventory"] = {
-            k: 0 for k in self.world.planner.inventory.keys()
+            k: 0
+            for k in self.world.planner.inventory.keys()
         }
         self.world.planner.state["escrow"] = {
-            k: 0 for k in self.world.planner.escrow.keys()
+            k: 0
+            for k in self.world.planner.escrow.keys()
         }
 
         # Place the agents randomly in the world
@@ -336,45 +354,199 @@ class Sinkhole(BaseEnvironment):
         """
 
         resources = [
-            x for x in self.world.resources if resource_registry.get(x).collectible]
+            x for x in self.world.resources
+            if resource_registry.get(x).collectible
+        ]
 
         all_resource_map = np.zeros(self.world.maps.size)
 
         for resource in resources:
             resource_map = self.world.maps.get(resource)
-            resource_source_blocks = self.world.maps.get(
-                resource + "SourceBlock")
+            resource_source_blocks = self.world.maps.get(resource +
+                                                         "SourceBlock")
 
             self.world.maps.set(
-                resource,
-                np.minimum(resource_map, resource_source_blocks)
-            )
+                resource, np.minimum(resource_map, resource_source_blocks))
             self.world.maps.set(
-                str(resource)+"SourceBlock",
-                np.minimum(resource_map, resource_source_blocks)
-            )
+                str(resource) + "SourceBlock",
+                np.minimum(resource_map, resource_source_blocks))
 
             all_resource_map += np.minimum(resource_map,
                                            resource_source_blocks)
 
         self._steps_in_duration += 1
-        total_launch = sum([v for k, v in self._launch_plan.items()])
+        total_launch = sum([v for _, v in self._launch_plan.items()])
+
+        metrics = self.scenario_metrics()
+        self._metrics_for_timesteps['profitability'].append(
+            metrics["social/profitability"])
+        self._metrics_for_timesteps['equality'].append(
+            metrics["social/equality"])
 
         # 投放全部被获取 or 超过一定steps 开始新的投放周期
         if np.sum(all_resource_map) <= max(1, self._normal_wear_and_tear_rate * total_launch) or \
             self._steps_in_duration >= self._timesteps_for_force_refresh_launch:
-                
+
             self._durations += 1
             self._steps_in_duration = 0
             self._last_launch_plan = deepcopy(self._curr_launch_plan)
-            if self._adjustemt_type == 'planner':
-                self._curr_launch_plan = {k: int(self._base_launch_plan[k]*v) for k, v in self.get_component(
-                        "LaunchReadjustment").launch_adjustment.items()}
-            elif self._adjustemt_type == 'none':
+
+            self._metrics_for_durations['profitability'].append(
+                np.max(self._metrics_for_timesteps['profitability']) -
+                self._metrics_for_durations['profitability'][-1])
+            self._metrics_for_durations['equality'].append(
+                np.mean(self._metrics_for_timesteps['equality']))
+
+            self._metrics_for_timesteps = {'profitability': [], 'equality': []}
+
+            if self._adjustemt_type == 'fixed':
+                # 固定投放，不调整
                 pass
+            elif self._adjustemt_type == 'random-asy':
+                # 随机投放（异步，即每个物品都随机）
+                adjustment_rates = self.get_component(
+                    "LaunchReadjustment").adjustment_rates
+                base_launch_adjustment = self.get_component(
+                    "LaunchReadjustment").base_launch_adjustment
+                self._last_launch_adjustment = deepcopy(
+                    self._curr_launch_adjustment)
+
+                self._curr_launch_adjustment = {
+                    k: base_launch_adjustment[k] +
+                    adjustment_rates[random.randint(0,
+                                                    len(adjustment_rates) - 1)]
+                    for k, _ in self._last_launch_adjustment.items()
+                }
+                self._curr_launch_plan = {
+                    k: int(self._base_launch_plan[k] * v)
+                    for k, v in self._curr_launch_adjustment.items()
+                }
+            elif self._adjustemt_type == 'random-syn':
+                # 随机投放（同步，即随机一次，每个物品相同）
+                adjustment_rates = self.get_component(
+                    "LaunchReadjustment").adjustment_rates
+                base_launch_adjustment = self.get_component(
+                    "LaunchReadjustment").base_launch_adjustment
+                self._last_launch_adjustment = deepcopy(
+                    self._curr_launch_adjustment)
+                adjustment_rate = adjustment_rates[random.randint(
+                    0,
+                    len(adjustment_rates) - 1)]
+                self._curr_launch_adjustment = {
+                    k: base_launch_adjustment[k] + adjustment_rate
+                    for k, _ in self._last_launch_adjustment.items()
+                }
+                self._curr_launch_plan = {
+                    k: int(self._base_launch_plan[k] * v)
+                    for k, v in self._curr_launch_adjustment.items()
+                }
+            elif self._adjustemt_type == 'planner':
+                # AI动态投放
+                self._last_launch_adjustment = deepcopy(
+                    self._curr_launch_adjustment)
+                self._curr_launch_adjustment = self.get_component(
+                    "LaunchReadjustment").launch_adjustment
+                self._curr_launch_plan = {
+                    k: int(self._base_launch_plan[k] * v)
+                    for k, v in self._curr_launch_adjustment.items()
+                }
+                self.get_component(
+                    "LaunchReadjustment").start_new_launch_adjustment()
+
+            elif self._adjustemt_type == 'greedy-equ':
+                # 贪心投放（公平性优先）
+                adjustment_rates = self.get_component(
+                    "LaunchReadjustment").adjustment_rates
+                base_launch_adjustment = self.get_component(
+                    "LaunchReadjustment").base_launch_adjustment
+                self._last_launch_adjustment = deepcopy(
+                    self._curr_launch_adjustment)
+                if self._metrics_for_durations['equality'][
+                        -1] < self._metrics_for_durations['equality'][-2]:
+                    # 公平性下降时，增加投放量
+                    self._curr_launch_adjustment = {
+                        k: base_launch_adjustment[k] + adjustment_rates[min(
+                            int(
+                                adjustment_rates.index(
+                                    round(v - base_launch_adjustment[k], 2)) +
+                                1),
+                            len(adjustment_rates) - 1)]
+                        for k, v in self._last_launch_adjustment.items()
+                    }
+                else:
+                    # 公平性不变或者上升时，再看盈利性
+                    if self._metrics_for_durations['profitability'][
+                            -1] < self._metrics_for_durations['profitability'][
+                                -2]:
+                        # 盈利性下降，减少投放量
+                        self._curr_launch_adjustment = {
+                            k:
+                            base_launch_adjustment[k] + adjustment_rates[max(
+                                int(
+                                    adjustment_rates.index(
+                                        round(v -
+                                              base_launch_adjustment[k], 2)) -
+                                    1), 0)]
+                            for k, v in self._last_launch_adjustment.items()
+                        }
+                    else:
+                        # 盈利性不变或者上升，保持上次投放量
+                        self._curr_launch_adjustment = deepcopy(
+                            self._last_launch_adjustment)
+
+                self._curr_launch_plan = {
+                    k: int(self._base_launch_plan[k] * v)
+                    for k, v in self._curr_launch_adjustment.items()
+                }
+
+            elif self._adjustemt_type == 'greedy-pro':
+                # 贪心投放（盈利性优先）
+                adjustment_rates = self.get_component(
+                    "LaunchReadjustment").adjustment_rates
+                base_launch_adjustment = self.get_component(
+                    "LaunchReadjustment").base_launch_adjustment
+                self._last_launch_adjustment = deepcopy(
+                    self._curr_launch_adjustment)
+                if self._metrics_for_durations['profitability'][
+                        -1] < self._metrics_for_durations['profitability'][-2]:
+                    # 盈利性下降时，减少投放量
+                    self._curr_launch_adjustment = {
+                        k: base_launch_adjustment[k] + adjustment_rates[max(
+                            int(
+                                adjustment_rates.index(
+                                    round(v - base_launch_adjustment[k], 2)) -
+                                1), 0)]
+                        for k, v in self._last_launch_adjustment.items()
+                    }
+                else:
+                    # 盈利性不变或者上升时，再看公平性
+                    if self._metrics_for_durations['equality'][
+                            -1] < self._metrics_for_durations['equality'][-2]:
+                        # 公平性下降时，增加投放量
+                        self._curr_launch_adjustment = {
+                            k:
+                            base_launch_adjustment[k] + adjustment_rates[min(
+                                int(
+                                    adjustment_rates.index(
+                                        round(v -
+                                              base_launch_adjustment[k], 2)) +
+                                    1),
+                                len(adjustment_rates) - 1)]
+                            for k, v in self._last_launch_adjustment.items()
+                        }
+                    else:
+                        # 公平性不变或者上升，保持上次投放量
+                        self._curr_launch_adjustment = deepcopy(
+                            self._last_launch_adjustment)
+
+                self._curr_launch_plan = {
+                    k: int(self._base_launch_plan[k] * v)
+                    for k, v in self._curr_launch_adjustment.items()
+                }
+
             else:
                 raise NotImplementedError
-            self.get_component("LaunchReadjustment").start_new_launch_adjustment()
+
             self.reset_starting_layout()
 
     def generate_observations(self):
@@ -417,29 +589,34 @@ class Sinkhole(BaseEnvironment):
         }
         agent_invs = {
             str(agent.idx): {
-                "inventory-" + k: v * self.inv_scale for k, v in agent.inventory.items()
+                "inventory-" + k: v * self.inv_scale
+                for k, v in agent.inventory.items()
             }
             for agent in self.world.agents
         }
 
         agent_escs = {
             str(agent.idx): {
-                "escrow-" + k: v * self.inv_scale for k, v in agent.escrow.items()
+                "escrow-" + k: v * self.inv_scale
+                for k, v in agent.escrow.items()
             }
             for agent in self.world.agents
         }
 
         agent_ends = {
             str(agent.idx): {
-                "endogenous-" + k: v * self.end_scale for k, v in agent.endogenous.items()
+                "endogenous-" + k: v * self.end_scale
+                for k, v in agent.endogenous.items()
             }
             for agent in self.world.agents
         }
 
         agent_util = {
             str(agent.idx): {
-                "utility-monetary_cost_sensitivity": agent.monetary_cost_sensitivity,
-                "utility-nonmonetary_cost_sensitivity": agent.nonmonetary_cost_sensitivity
+                "utility-monetary_cost_sensitivity":
+                agent.monetary_cost_sensitivity,
+                "utility-nonmonetary_cost_sensitivity":
+                agent.nonmonetary_cost_sensitivity
             }
             for agent in self.world.agents
         }
@@ -461,8 +638,7 @@ class Sinkhole(BaseEnvironment):
 
         if self._planner_gets_spatial_info:
             obs[self.world.planner.idx].update(
-                dict(map=curr_map, idx_map=agent_idx_maps)
-            )
+                dict(map=curr_map, idx_map=agent_idx_maps))
 
         # Mobile agents see the full map. Convey location info via one-hot map channels.
         if self._full_observability:
@@ -498,12 +674,10 @@ class Sinkhole(BaseEnvironment):
 
             for agent in self.world.agents:
                 r, c = [c + w for c in agent.loc]
-                visible_map = padded_map[
-                    :, (r - w): (r + w + 1), (c - w): (c + w + 1)
-                ]
-                visible_idx = np.array(
-                    padded_idx[:, (r - w): (r + w + 1), (c - w): (c + w + 1)]
-                )
+                visible_map = padded_map[:, (r - w):(r + w + 1),
+                                         (c - w):(c + w + 1)]
+                visible_idx = np.array(padded_idx[:, (r - w):(r + w + 1),
+                                                  (c - w):(c + w + 1)])
 
                 visible_idx[visible_idx == int(agent.idx) + 2] = 1
 
@@ -608,41 +782,35 @@ class Sinkhole(BaseEnvironment):
         metrics = dict()
 
         capability_endowments = np.array(
-            [agent.endogenous['Capability'] for agent in self.world.agents]
-        )
+            [agent.endogenous['Capability'] for agent in self.world.agents])
 
-        currency_endowments = np.array(
-            [self.starting_player_currency -
-                agent.total_endowment("Currency") for agent in self.world.agents]
-        )
+        currency_endowments = np.array([
+            self.starting_player_currency - agent.total_endowment("Currency")
+            for agent in self.world.agents
+        ])
 
-        metrics["social/productivity"] = social_metrics.get_productivity(
-            currency_endowments
-        )
+        metrics["social/profitability"] = social_metrics.get_profitability(
+            currency_endowments) / self.world.n_agents
         metrics["social/equality"] = social_metrics.get_equality(
-            capability_endowments
-        )
+            capability_endowments)
 
         metrics["social_welfare/planner"] = rewards.utility_for_planner(
             monetary_incomes=currency_endowments,
             nonmonetary_incomes=capability_endowments,
-            equality_weight=1.0
-        )
+            equality_weight=1.0)
 
         for agent in self.all_agents:
             for resource, quantity in agent.inventory.items():
-                metrics[
-                    "endow/{}/{}".format(agent.idx, resource)
-                ] = agent.total_endowment(resource)
+                metrics["endow/{}/{}".format(
+                    agent.idx, resource)] = agent.total_endowment(resource)
 
             if agent.endogenous is not None:
                 for resource, quantity in agent.endogenous.items():
-                    metrics["endogenous/{}/{}".format(
-                        agent.idx, resource)] = quantity
+                    metrics["endogenous/{}/{}".format(agent.idx,
+                                                      resource)] = quantity
 
-            metrics["util/{}".format(agent.idx)] = self.curr_optimization_metric[
-                agent.idx
-            ]
+            metrics["util/{}".format(
+                agent.idx)] = self.curr_optimization_metric[agent.idx]
 
         # Labor weight
         metrics["labor/weighted_cost"] = self.energy_cost * self.energy_weight

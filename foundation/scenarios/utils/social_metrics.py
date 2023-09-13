@@ -62,7 +62,7 @@ def get_equality(endowments):
     return 1 - get_gini(endowments)
 
 
-def get_productivity(coin_endowments):
+def get_profitability(coin_endowments):
     """Returns the total coin inside the simulated economy.
 
     Args:
