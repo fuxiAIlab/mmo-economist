@@ -175,8 +175,16 @@ class Sinkhole(BaseEnvironment):
             'random-asy', 'random-syn'
         ]
 
-        self._metrics_for_timesteps = {'profitability': [], 'equality': []}
-        self._metrics_for_durations = {'profitability': [0.], 'equality': [0.]}
+        self._metrics_for_timesteps = {
+            'profitability': [],
+            'equality': [],
+            'graduation': []
+        }
+        self._metrics_for_durations = {
+            'profitability': [0.],
+            'equality': [0.],
+            'graduation': [0.]
+        }
         self._last_launch_adjustment = self.get_component(
             "LaunchReadjustment").base_launch_adjustment
         self._curr_launch_adjustment = self.get_component(
@@ -382,6 +390,8 @@ class Sinkhole(BaseEnvironment):
             metrics["social/profitability"])
         self._metrics_for_timesteps['equality'].append(
             metrics["social/equality"])
+        self._metrics_for_timesteps['graduation'].append(
+            metrics["social/graduation"])
 
         # 投放全部被获取 or 超过一定steps 开始新的投放周期
         if np.sum(all_resource_map) <= max(1, self._normal_wear_and_tear_rate * total_launch) or \
@@ -396,8 +406,14 @@ class Sinkhole(BaseEnvironment):
                 self._metrics_for_durations['profitability'][-1])
             self._metrics_for_durations['equality'].append(
                 np.mean(self._metrics_for_timesteps['equality']))
+            self._metrics_for_durations['graduation'].append(
+                np.max(self._metrics_for_timesteps['graduation']))
 
-            self._metrics_for_timesteps = {'profitability': [], 'equality': []}
+            self._metrics_for_timesteps = {
+                'profitability': [],
+                'equality': [],
+                'graduation': []
+            }
 
             if self._adjustemt_type == 'fixed':
                 # 固定投放，不调整
@@ -793,6 +809,10 @@ class Sinkhole(BaseEnvironment):
             currency_endowments) / self.world.n_agents
         metrics["social/equality"] = social_metrics.get_equality(
             capability_endowments)
+        metrics["social/graduation"] = np.sum([
+            1 if agent.endogenous['Capability'] >=
+            (self._durations + 1) * 100 else 0 for agent in self.world.agents
+        ]) / self.world.n_agents
 
         metrics["social_welfare/planner"] = rewards.utility_for_planner(
             monetary_incomes=currency_endowments,
