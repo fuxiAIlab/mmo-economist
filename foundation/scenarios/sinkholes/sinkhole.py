@@ -57,8 +57,6 @@ class Sinkhole(BaseEnvironment):
 
         self._player_observation_range = int(player_observation_range)
 
-        self._durations = 0
-        self._steps_in_duration = 0
         self._checker_source_blocks = bool(checker_source_blocks)
         c, r = np.meshgrid(
             np.arange(self.world_size[1]) % 2,
@@ -71,9 +69,7 @@ class Sinkhole(BaseEnvironment):
         assert isinstance(base_launch_plan, dict)
         self._base_launch_plan = base_launch_plan
 
-        self._curr_launch_plan = deepcopy(self._base_launch_plan)
-        self._last_launch_plan = deepcopy(self._base_launch_plan)
-
+        self.init_launch_plan()
         self._source_maps = self.init_map_layout()
         self._normal_wear_and_tear_rate = normal_wear_and_tear_rate
 
@@ -129,44 +125,13 @@ class Sinkhole(BaseEnvironment):
         }
 
         self._timesteps_for_force_refresh_launch = timesteps_for_force_refresh_launch
+        self._player_monetary_cost_dist = player_monetary_cost_dist.lower()
+        self._player_nonmonetary_cost_dist = player_nonmonetary_cost_dist.lower(
+        )
+        assert self._player_monetary_cost_dist in ['pareto', 'normal']
+        assert self._player_nonmonetary_cost_dist in ['pareto', 'normal']
 
-        # Initialize the agent's monetary and nonmonetary utility cost sensitivity
-        if player_monetary_cost_dist.lower() == 'pareto':
-            pareto_samples = np.random.pareto(4, size=(100000, self.n_agents))
-            clipped_samples = np.minimum(1, pareto_samples)
-            sorted_clipped_samples = np.sort(clipped_samples, axis=1)
-            average_ranked_samples = sorted_clipped_samples.mean(axis=0)
-            np.random.shuffle(average_ranked_samples)
-            self._player_monetary_cost_sensitivities = 1 - average_ranked_samples
-        elif player_monetary_cost_dist.lower() == 'normal':
-            normal_samples = np.random.normal((1 + 0) / 2, (1 - 0) / 3,
-                                              self.n_agents)
-            self._player_monetary_cost_sensitivities = np.clip(
-                normal_samples, 0, 1)
-        else:
-            raise NotImplementedError
-
-        if player_nonmonetary_cost_dist.lower() == 'pareto':
-            pareto_samples = np.random.pareto(4, size=(100000, self.n_agents))
-            clipped_samples = np.minimum(1, pareto_samples)
-            sorted_clipped_samples = np.sort(clipped_samples, axis=1)
-            average_ranked_samples = sorted_clipped_samples.mean(axis=0)
-            np.random.shuffle(average_ranked_samples)
-            self._player_nonmonetary_cost_sensitivities = 1 - average_ranked_samples
-        elif player_nonmonetary_cost_dist.lower() == 'normal':
-            normal_samples = np.random.normal((1 + 0) / 2, (1 - 0) / 3,
-                                              self.n_agents)
-            self._player_nonmonetary_cost_sensitivities = np.clip(
-                normal_samples, 0, 1)
-        else:
-            raise NotImplementedError
-
-        for agent in self.world.agents:
-            agent.set_cost_sensitivity(
-                monetary_cost_sensitivity=self.
-                _player_monetary_cost_sensitivities[agent.idx],
-                nonmonetary_cost_sensitivity=self.
-                _player_nonmonetary_cost_sensitivities[agent.idx])
+        self.init_agent_personality()
 
         self._player_utility_income_fxrate = player_utility_income_fxrate
         assert isinstance(adjustemt_type, str)
@@ -181,21 +146,6 @@ class Sinkhole(BaseEnvironment):
         assert (max_duration > 0 and isinstance(max_duration, int))
 
         self._graduation_per_duration = graduation_per_duration
-
-        self._metrics_for_timesteps = {
-            'profitability': [],
-            'equality': [],
-            'graduation': []
-        }
-        self._metrics_for_durations = {
-            'profitability': [0.],
-            'equality': [0.],
-            'graduation': [0.]
-        }
-        self._last_launch_adjustment = self.get_component(
-            "LaunchReadjustment").base_launch_adjustment
-        self._curr_launch_adjustment = self.get_component(
-            "LaunchReadjustment").base_launch_adjustment
 
     @property
     def base_launch_plan(self):
@@ -239,6 +189,68 @@ class Sinkhole(BaseEnvironment):
             self.world.maps.set(str(k), v_)
             self.world.maps.set(str(k) + "SourceBlock", v_)
         return _source_maps
+
+    # 初始化人设
+    def init_agent_personality(self):
+        # Initialize the agent's monetary and nonmonetary utility cost sensitivity
+        if self._player_monetary_cost_dist == 'pareto':
+            pareto_samples = np.random.pareto(4, size=(100000, self.n_agents))
+            clipped_samples = np.minimum(1, pareto_samples)
+            sorted_clipped_samples = np.sort(clipped_samples, axis=1)
+            average_ranked_samples = sorted_clipped_samples.mean(axis=0)
+            np.random.shuffle(average_ranked_samples)
+            self._player_monetary_cost_sensitivities = 1 - average_ranked_samples
+        elif self._player_monetary_cost_dist == 'normal':
+            normal_samples = np.random.normal((1 + 0) / 2, (1 - 0) / 3,
+                                              self.n_agents)
+            self._player_monetary_cost_sensitivities = np.clip(
+                normal_samples, 0, 1)
+        else:
+            raise NotImplementedError
+
+        if self._player_nonmonetary_cost_dist == 'pareto':
+            pareto_samples = np.random.pareto(4, size=(100000, self.n_agents))
+            clipped_samples = np.minimum(1, pareto_samples)
+            sorted_clipped_samples = np.sort(clipped_samples, axis=1)
+            average_ranked_samples = sorted_clipped_samples.mean(axis=0)
+            np.random.shuffle(average_ranked_samples)
+            self._player_nonmonetary_cost_sensitivities = 1 - average_ranked_samples
+        elif self._player_nonmonetary_cost_dist == 'normal':
+            normal_samples = np.random.normal((1 + 0) / 2, (1 - 0) / 3,
+                                              self.n_agents)
+            self._player_nonmonetary_cost_sensitivities = np.clip(
+                normal_samples, 0, 1)
+        else:
+            raise NotImplementedError
+
+        for agent in self.world.agents:
+            agent.set_cost_sensitivity(
+                monetary_cost_sensitivity=self.
+                _player_monetary_cost_sensitivities[agent.idx],
+                nonmonetary_cost_sensitivity=self.
+                _player_nonmonetary_cost_sensitivities[agent.idx])
+
+    # 初始化投放
+    def init_launch_plan(self):
+        self._durations = 0
+        self._steps_in_duration = 0
+        self._curr_launch_plan = deepcopy(self._base_launch_plan)
+        self._last_launch_plan = deepcopy(self._base_launch_plan)
+        self._last_launch_adjustment = self.get_component(
+            "LaunchReadjustment").base_launch_adjustment
+        self._curr_launch_adjustment = self.get_component(
+            "LaunchReadjustment").base_launch_adjustment
+
+        self._metrics_for_timesteps = {
+            'profitability': [],
+            'equality': [],
+            'graduation': []
+        }
+        self._metrics_for_durations = {
+            'profitability': [0.],
+            'equality': [0.],
+            'graduation': [0.]
+        }
 
     @property
     def energy_weight(self):
@@ -309,6 +321,7 @@ class Sinkhole(BaseEnvironment):
 
         Here, generate a resource source layout consistent with target parameters.
         """
+        self.init_launch_plan()
         self.world.maps.clear()
         self._source_maps = self.init_map_layout()
 
@@ -327,11 +340,14 @@ class Sinkhole(BaseEnvironment):
             agent.state["inventory"] = {k: 0 for k in agent.inventory.keys()}
             agent.state["escrow"] = {k: 0 for k in agent.inventory.keys()}
             agent.state["endogenous"] = {k: 0 for k in agent.endogenous.keys()}
-            # Add starting coin
+            # Add starting items
             agent.state["inventory"]["Token"] = float(
                 self.starting_player_token)
             agent.state["inventory"]["Currency"] = float(
                 self.starting_player_currency)
+
+        # Initialize the agent's monetary and nonmonetary utility cost sensitivity
+        self.init_agent_personality()
 
         # Clear everything for the planner
         self.world.planner.state["inventory"] = {
@@ -570,7 +586,9 @@ class Sinkhole(BaseEnvironment):
             else:
                 raise NotImplementedError
 
-            self.reset_starting_layout()
+            # self.reset_starting_layout()
+            self.world.maps.clear()
+            self._source_maps = self.init_map_layout()
 
     def generate_observations(self):
         """
