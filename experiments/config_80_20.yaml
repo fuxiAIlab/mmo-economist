@@ -33,10 +33,10 @@ env:
       adjustment_rate_min: 0.0 
       adjustment_rate_bin: 0.1
   isoelastic_eta: 0.23
-  energy_cost: 0.21
+  energy_cost: 0.1 #0.21
   energy_warmup_constant: 10000
   energy_warmup_method: auto
-  episode_length: 5000
+  episode_length: 1000
   dense_log_frequency: 50
   flatten_masks: true
   flatten_observations: true
@@ -70,7 +70,7 @@ general:
 #  gpus: 0
 #  restore_tf_weights_agents: ''
 #  restore_tf_weights_planner: ''
-  train_planner: true #false
+  train_planner: false #true #false
 agent_policy:
   clip_param: 0.3
   entropy_coeff: 0.025

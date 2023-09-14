@@ -17,7 +17,7 @@ from ray.rllib.agents.ppo import PPOTrainer
 
 ray.init(webui_host='127.0.0.1')
 
-config_path = os.path.join('./experiments', "config.yaml")
+config_path = os.path.join('./experiments', "config_80_20.yaml")
 
 with open(config_path, "r") as f:
     run_configuration = yaml.safe_load(f)
@@ -27,7 +27,6 @@ env_config = {
     "env_config_dict": run_configuration.get("env"),
     "num_envs_per_worker": trainer_config.get("num_envs_per_worker"),
 }
-print('test1')
 
 dummy_env = RLlibEnvWrapper(env_config, verbose=True)
 
@@ -66,11 +65,10 @@ trainer_config.update(
         * trainer_config.get("num_envs_per_worker"),
     }
 )
-print('test1')
 trainer = PPOTrainer(env=RLlibEnvWrapper, config=trainer_config)
 #trainer._restore('tmp_3.4641548739493224/checkpoint_9/checkpoint-9')
 #trainer._restore('ckpt_a/tmp_37.74633408773801/checkpoint_158/checkpoint-158')
-trainer._restore('ckpt_a/tmp_39.47267792436246/checkpoint_193/checkpoint-193')
+#trainer._restore('ckpt_a/tmp_39.47267792436246/checkpoint_193/checkpoint-193')
 #trainer._restore('tmp_6.800040908919548/checkpoint_1049/checkpoint-1049')
 NUM_ITERS = 1500
 cur_best=0
