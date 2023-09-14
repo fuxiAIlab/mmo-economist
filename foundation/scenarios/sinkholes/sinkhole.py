@@ -30,6 +30,8 @@ class Sinkhole(BaseEnvironment):
                      "Mat": 5,
                      "Token": 5
                  },
+                 graduation_per_duration=100,
+                 max_duration=10,
                  timesteps_for_force_refresh_launch=1000,
                  adjustemt_type='none',
                  normal_wear_and_tear_rate=0.05,
@@ -175,6 +177,11 @@ class Sinkhole(BaseEnvironment):
             'random-asy', 'random-syn'
         ]
 
+        self._max_duration = max_duration
+        assert (max_duration > 0 and isinstance(max_duration, int))
+
+        self._graduation_per_duration = graduation_per_duration
+
         self._metrics_for_timesteps = {
             'profitability': [],
             'equality': [],
@@ -243,12 +250,12 @@ class Sinkhole(BaseEnvironment):
             return 1.0
 
         if self.energy_warmup_method == "decay":
-            return float(1.0 - np.exp(-self._completions /
-                                      self.energy_warmup_constant))
+            return float(-np.exp(-self._completions /
+                                 self.energy_warmup_constant))
 
         if self.energy_warmup_method == "auto":
-            return float(1.0 - np.exp(-self._auto_warmup_integrator /
-                                      self.energy_warmup_constant))
+            return float(-np.exp(-self._auto_warmup_integrator /
+                                 self.energy_warmup_constant))
 
         raise NotImplementedError
 
@@ -760,6 +767,13 @@ class Sinkhole(BaseEnvironment):
 
         return rew
 
+    def check_if_done(self):
+        # 当前时间步数大于episode长度 或者 当前周期数大于最大周期数,  done = {"__all__": True}
+        if self.world.timestep >= self._episode_length or self._durations >= self._max_duration:
+            return True
+        else:
+            return False
+
     # Optional methods for customization
     # ----------------------------------
 
@@ -811,7 +825,8 @@ class Sinkhole(BaseEnvironment):
             capability_endowments)
         metrics["social/graduation"] = np.sum([
             1 if agent.endogenous['Capability'] >=
-            (self._durations + 1) * 100 else 0 for agent in self.world.agents
+            (self._durations + 1) * self._graduation_per_duration else 0
+            for agent in self.world.agents
         ]) / self.world.n_agents
 
         metrics["social_welfare/planner"] = rewards.utility_for_planner(
