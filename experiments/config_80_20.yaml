@@ -36,7 +36,7 @@ env:
   energy_cost: 0.21
   energy_warmup_constant: 10000
   energy_warmup_method: auto
-  episode_length: 1000
+  episode_length: 5000
   dense_log_frequency: 50
   flatten_masks: true
   flatten_observations: true
