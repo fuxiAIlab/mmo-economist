@@ -21,33 +21,31 @@ class LaunchReadjustment(BaseComponent):
     required_entities = ["Exp", "Mat", "Token"]
     agent_subclasses = ["BasicPlayer"]
 
-    def __init__(
-        self,
-        *base_component_args,
-        is_biadjustment=True,
-        adjustment_period=100,
-        adjustment_rate_max=0.2,
-        adjustment_rate_min=0.0,
-        adjustment_rate_bin=0.1,
-        **base_component_kwargs
-    ):
+    def __init__(self,
+                 *base_component_args,
+                 is_biadjustment=True,
+                 adjustment_period=500,
+                 adjustment_rate_max=0.2,
+                 adjustment_rate_min=0.0,
+                 adjustment_rate_bin=0.1,
+                 **base_component_kwargs):
         super().__init__(*base_component_args, **base_component_kwargs)
 
         assert adjustment_rate_max >= 0 and adjustment_rate_min >= 0 and adjustment_rate_bin > 0
         assert adjustment_rate_max >= adjustment_rate_min
         assert adjustment_rate_bin <= adjustment_rate_max - adjustment_rate_min
 
+        # TODO: 这个参数可能无用了
         self.adjustment_period = int(adjustment_period)
         assert self.adjustment_period > 0
 
         self.adjustment_cycle_pos = 1
 
-        if adjustment_rate_min > 0:
-            self._adjustment_rates = [adjustment_rate_min+adjustment_rate_bin*x for x in range(
-                int((adjustment_rate_max-adjustment_rate_min)/adjustment_rate_bin)+1)]
-        else:
-            self._adjustment_rates = [adjustment_rate_min+adjustment_rate_bin*x for x in range(
-                1, int((adjustment_rate_max-adjustment_rate_min)/adjustment_rate_bin)+1)]
+        self._adjustment_rates = [
+                adjustment_rate_min + adjustment_rate_bin * x for x in range(
+                    int((adjustment_rate_max - adjustment_rate_min) /
+                        adjustment_rate_bin) + 1)
+            ]
 
         if is_biadjustment:
             self._adjustment_rates = self._adjustment_rates + \
@@ -67,11 +65,15 @@ class LaunchReadjustment(BaseComponent):
     @property
     def launch_adjustment(self):
         return self._curr_launch_adjustment
+    
+    def start_new_launch_adjustment(self):
+        self.adjustment_cycle_pos = 1
 
     def get_n_actions(self, agent_cls_name):
         """This component is passive: it does not add any actions."""
         if agent_cls_name == "BasicPlanner":
-            return [(resource, len(self._adjustment_rates)) for resource in self.required_entities]
+            return [(resource, len(self._adjustment_rates))
+                    for resource in self.required_entities]
         return 0
 
     def get_additional_state_fields(self, agent_cls_name):
@@ -87,59 +89,47 @@ class LaunchReadjustment(BaseComponent):
                     self.name, resource)
 
                 if planner_action == 0:
-                    self._curr_launch_adjustment[resource] = self._base_launch_adjustment[resource]
+                    self._curr_launch_adjustment[
+                        resource] = self._base_launch_adjustment[resource]
                 elif planner_action <= len(self._adjustment_rates):
                     self._curr_launch_adjustment[resource] = self._base_launch_adjustment[resource] + \
-                        self._adjustment_rates[int(planner_action-1)]
+                        self._adjustment_rates[int(planner_action)-1]
                 else:
                     raise ValueError
-
-        if self.adjustment_cycle_pos >= self.adjustment_period:
-            self.adjustment_cycle_pos = 0
-
-        else:
-            self.adjustments.append([])
 
         self.adjustment_cycle_pos += 1
 
     def generate_observations(self):
-        is_adjustment_day = float(
-            self.adjustment_cycle_pos >= self.adjustment_period
-        )
+        # is_adjustment_day = float(
+            # self.adjustment_cycle_pos >= self.adjustment_period)
         is_first_day = float(self.adjustment_cycle_pos == 1)
         adjustment_phase = self.adjustment_cycle_pos / self.adjustment_period
 
         obs = dict()
 
         obs[self.world.planner.idx] = dict(
-            is_adjustment_day=is_adjustment_day,
-            is_first_day=is_first_day,
-            adjustment_phase=adjustment_phase
-        )
+            # is_adjustment_day=is_adjustment_day,
+                                           is_first_day=is_first_day,
+                                           adjustment_phase=adjustment_phase)
 
-        obs[self.world.planner.idx].update(
-            {
-                'last_adjustment_' + str(resource): self._last_launch_adjustment[resource]
-                for resource in self.required_entities
-            }
-        )
+        obs[self.world.planner.idx].update({
+            'last_adjustment_' + str(resource):
+            self._last_launch_adjustment[resource]
+            for resource in self.required_entities
+        })
 
-        obs[self.world.planner.idx].update(
-            {
-                'curr_adjustment_' + str(resource): self._curr_launch_adjustment[resource]
-                for resource in self.required_entities
-            }
-        )
-
+        obs[self.world.planner.idx].update({
+            'curr_adjustment_' + str(resource):
+            self._curr_launch_adjustment[resource]
+            for resource in self.required_entities
+        })
 
         for agent in self.world.agents:
-            i = agent.idx
 
             obs[str(agent.idx)] = dict(
-                is_adjustment_day=is_adjustment_day,
-                is_first_day=is_first_day,
-                adjustment_phase=adjustment_phase
-            )
+                # is_adjustment_day=is_adjustment_day,
+                                       is_first_day=is_first_day,
+                                       adjustment_phase=adjustment_phase)
 
             # TODO: planner能观察到player的信息？
             # obs["p" + str(agent.idx)] = dict(
@@ -159,8 +149,7 @@ class LaunchReadjustment(BaseComponent):
                 zero={
                     k: np.zeros_like(v)
                     for k, v in masks[self.world.planner.idx].items()
-                }
-            )
+                })
 
         masks = dict()
         if self.adjustment_cycle_pos != 1:

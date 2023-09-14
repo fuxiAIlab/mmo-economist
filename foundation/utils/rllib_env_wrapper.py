@@ -210,8 +210,23 @@ class RLlibEnvWrapper(MultiAgentEnv):
         return recursive_list_to_np_array(obs)
 
     def step(self, action_dict):
+
+        # used for test no-op planner, set adj num to 100%(no-adjustment) for all resources
+        # action_dict['p'][0]=3;action_dict['p'][1]=3;action_dict['p'][2]=3;
+
         obs, rew, done, info = self.env.step(action_dict)
-        assert isinstance(obs[self.sample_agent_idx]
-                          ["action_mask"], np.ndarray)
+
+        # modify mask of planner, no explicit affect on performance
+        for idx, resource in enumerate(['Exp', 'Mat', 'Token']):
+                # can do any action except no-op
+                obs['p']['action_mask'][6*idx] = 0.0
+                # keep last op
+                if np.sum(obs['p']['action_mask']) < 4:
+                    resource_idx=action_dict['p'][idx]
+                    obs['p']['action_mask'][6*idx+resource_idx]=1.0
+
+
+        # assert isinstance(obs[self.sample_agent_idx]
+        #                   ["action_mask"], np.ndarray)
 
         return recursive_list_to_np_array(obs), rew, done, info

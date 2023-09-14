@@ -16,3 +16,20 @@ class BasicPlayer(BaseAgent):
     """
 
     name = "BasicPlayer"
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._monetary_cost_sensitivity = 0.5
+        self._nonmonetary_cost_sensitivity = 0.5
+    
+    def set_cost_sensitivity(self, monetary_cost_sensitivity, nonmonetary_cost_sensitivity):
+        self._monetary_cost_sensitivity = monetary_cost_sensitivity
+        self._nonmonetary_cost_sensitivity = nonmonetary_cost_sensitivity
+
+    @property
+    def monetary_cost_sensitivity(self):
+        return self._monetary_cost_sensitivity
+    
+    @property
+    def nonmonetary_cost_sensitivity(self):
+        return self._nonmonetary_cost_sensitivity
