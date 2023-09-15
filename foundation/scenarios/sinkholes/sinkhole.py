@@ -147,6 +147,11 @@ class Sinkhole(BaseEnvironment):
 
         self._graduation_per_period = graduation_per_period
 
+        self._max_capability_in_last_period = {
+            str(agent.idx): 0
+            for agent in self.world.agents
+        }
+
     @property
     def base_launch_plan(self):
         return self._base_launch_plan
@@ -244,12 +249,14 @@ class Sinkhole(BaseEnvironment):
         self._metrics_for_timesteps = {
             'profitability': [],
             'equality': [],
-            'graduation': []
+            'final_graduation': [],
+            'period_graduation': []
         }
         self._metrics_for_periods = {
             'profitability': [0.],
             'equality': [0.],
-            'graduation': [0.]
+            'final_graduation': [0.],
+            'period_graduation': [0.]
         }
 
     @property
@@ -324,6 +331,11 @@ class Sinkhole(BaseEnvironment):
         self.init_launch_plan()
         self.world.maps.clear()
         self._source_maps = self.init_map_layout()
+        self._auto_warmup_integrator = 0
+        self._max_capability_in_last_period = {
+            str(agent.idx): 0
+            for agent in self.world.agents
+        }
 
     def reset_agent_states(self):
         """
@@ -413,8 +425,10 @@ class Sinkhole(BaseEnvironment):
             metrics["social/profitability"])
         self._metrics_for_timesteps['equality'].append(
             metrics["social/equality"])
-        self._metrics_for_timesteps['graduation'].append(
-            metrics["social/graduation"])
+        self._metrics_for_timesteps['final_graduation'].append(
+            metrics["social/final_graduation"])
+        self._metrics_for_timesteps['period_graduation'].append(
+            metrics["social/period_graduation"])
 
         # 投放全部被获取 or 超过一定steps 开始新的投放周期
         if np.sum(all_resource_map) <= max(1, self._normal_wear_and_tear_rate * total_launch) or \
@@ -422,6 +436,11 @@ class Sinkhole(BaseEnvironment):
 
             self._periods += 1
             self._steps_in_period = 0
+            self._max_capability_in_last_period = {
+                str(agent.idx): agent.endogenous['Capability']
+                for agent in self.world.agents
+            }
+
             self._last_launch_plan = deepcopy(self._curr_launch_plan)
 
             self._metrics_for_periods['profitability'].append(
@@ -429,13 +448,14 @@ class Sinkhole(BaseEnvironment):
                 self._metrics_for_periods['profitability'][-1])
             self._metrics_for_periods['equality'].append(
                 np.mean(self._metrics_for_timesteps['equality']))
-            self._metrics_for_periods['graduation'].append(
-                np.max(self._metrics_for_timesteps['graduation']))
+            self._metrics_for_periods['final_graduation'].append(
+                np.max(self._metrics_for_timesteps['final_graduation']))
+            self._metrics_for_periods['period_graduation'].append(
+                np.max(self._metrics_for_timesteps['period_graduation']))
 
             self._metrics_for_timesteps = {
-                'profitability': [],
-                'equality': [],
-                'graduation': []
+                k: []
+                for k, _ in self._metrics_for_timesteps.items()
             }
 
             if self._adjustemt_type == 'fixed':
@@ -858,9 +878,16 @@ class Sinkhole(BaseEnvironment):
             currency_endowments) / self.world.n_agents
         metrics["social/equality"] = social_metrics.get_equality(
             capability_endowments)
-        metrics["social/graduation"] = np.sum([
+        metrics["social/final_graduation"] = np.sum([
             1 if agent.endogenous['Capability'] >= (self._periods + 1) *
             self._graduation_per_period else 0 for agent in self.world.agents
+        ]) / self.world.n_agents
+
+        metrics["social/period_graduation"] = np.sum([
+            1 if (agent.endogenous['Capability'] -
+                  self._max_capability_in_last_period[str(agent.idx)])
+            >= self._graduation_per_period else 0
+            for agent in self.world.agents
         ]) / self.world.n_agents
 
         metrics["social_welfare/planner"] = rewards.utility_for_planner(
