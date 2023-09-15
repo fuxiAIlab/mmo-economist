@@ -30,8 +30,8 @@ class Sinkhole(BaseEnvironment):
                      "Mat": 5,
                      "Token": 5
                  },
-                 graduation_per_duration=100,
-                 max_duration=10,
+                 graduation_per_period=100,
+                 max_period=10,
                  timesteps_for_force_refresh_launch=1000,
                  adjustemt_type='none',
                  normal_wear_and_tear_rate=0.05,
@@ -142,10 +142,10 @@ class Sinkhole(BaseEnvironment):
             'random-asy', 'random-syn'
         ]
 
-        self._max_duration = max_duration
-        assert (max_duration > 0 and isinstance(max_duration, int))
+        self._max_period = max_period
+        assert (max_period > 0 and isinstance(max_period, int))
 
-        self._graduation_per_duration = graduation_per_duration
+        self._graduation_per_period = graduation_per_period
 
     @property
     def base_launch_plan(self):
@@ -232,8 +232,8 @@ class Sinkhole(BaseEnvironment):
 
     # 初始化投放
     def init_launch_plan(self):
-        self._durations = 0
-        self._steps_in_duration = 0
+        self._periods = 0
+        self._steps_in_period = 0
         self._curr_launch_plan = deepcopy(self._base_launch_plan)
         self._last_launch_plan = deepcopy(self._base_launch_plan)
         self._last_launch_adjustment = self.get_component(
@@ -246,7 +246,7 @@ class Sinkhole(BaseEnvironment):
             'equality': [],
             'graduation': []
         }
-        self._metrics_for_durations = {
+        self._metrics_for_periods = {
             'profitability': [0.],
             'equality': [0.],
             'graduation': [0.]
@@ -405,7 +405,7 @@ class Sinkhole(BaseEnvironment):
             all_resource_map += np.minimum(resource_map,
                                            resource_source_blocks)
 
-        self._steps_in_duration += 1
+        self._steps_in_period += 1
         total_launch = sum([v for _, v in self._launch_plan.items()])
 
         metrics = self.scenario_metrics()
@@ -418,18 +418,18 @@ class Sinkhole(BaseEnvironment):
 
         # 投放全部被获取 or 超过一定steps 开始新的投放周期
         if np.sum(all_resource_map) <= max(1, self._normal_wear_and_tear_rate * total_launch) or \
-            self._steps_in_duration >= self._timesteps_for_force_refresh_launch:
+            self._steps_in_period >= self._timesteps_for_force_refresh_launch:
 
-            self._durations += 1
-            self._steps_in_duration = 0
+            self._periods += 1
+            self._steps_in_period = 0
             self._last_launch_plan = deepcopy(self._curr_launch_plan)
 
-            self._metrics_for_durations['profitability'].append(
+            self._metrics_for_periods['profitability'].append(
                 np.max(self._metrics_for_timesteps['profitability']) -
-                self._metrics_for_durations['profitability'][-1])
-            self._metrics_for_durations['equality'].append(
+                self._metrics_for_periods['profitability'][-1])
+            self._metrics_for_periods['equality'].append(
                 np.mean(self._metrics_for_timesteps['equality']))
-            self._metrics_for_durations['graduation'].append(
+            self._metrics_for_periods['graduation'].append(
                 np.max(self._metrics_for_timesteps['graduation']))
 
             self._metrics_for_timesteps = {
@@ -451,7 +451,8 @@ class Sinkhole(BaseEnvironment):
                     self._curr_launch_adjustment)
 
                 self._curr_launch_adjustment = {
-                    k: base_launch_adjustment[k] +
+                    k:
+                    base_launch_adjustment[k] +
                     adjustment_rates[random.randint(0,
                                                     len(adjustment_rates) - 1)]
                     for k, _ in self._last_launch_adjustment.items()
@@ -500,11 +501,12 @@ class Sinkhole(BaseEnvironment):
                     "LaunchReadjustment").base_launch_adjustment
                 self._last_launch_adjustment = deepcopy(
                     self._curr_launch_adjustment)
-                if self._metrics_for_durations['equality'][
-                        -1] < self._metrics_for_durations['equality'][-2]:
+                if self._metrics_for_periods['equality'][
+                        -1] < self._metrics_for_periods['equality'][-2]:
                     # 公平性下降时，增加投放量
                     self._curr_launch_adjustment = {
-                        k: base_launch_adjustment[k] + adjustment_rates[min(
+                        k:
+                        base_launch_adjustment[k] + adjustment_rates[min(
                             int(
                                 adjustment_rates.index(
                                     round(v - base_launch_adjustment[k], 2)) +
@@ -514,8 +516,8 @@ class Sinkhole(BaseEnvironment):
                     }
                 else:
                     # 公平性不变或者上升时，再看盈利性
-                    if self._metrics_for_durations['profitability'][
-                            -1] < self._metrics_for_durations['profitability'][
+                    if self._metrics_for_periods['profitability'][
+                            -1] < self._metrics_for_periods['profitability'][
                                 -2]:
                         # 盈利性下降，减少投放量
                         self._curr_launch_adjustment = {
@@ -546,11 +548,12 @@ class Sinkhole(BaseEnvironment):
                     "LaunchReadjustment").base_launch_adjustment
                 self._last_launch_adjustment = deepcopy(
                     self._curr_launch_adjustment)
-                if self._metrics_for_durations['profitability'][
-                        -1] < self._metrics_for_durations['profitability'][-2]:
+                if self._metrics_for_periods['profitability'][
+                        -1] < self._metrics_for_periods['profitability'][-2]:
                     # 盈利性下降时，减少投放量
                     self._curr_launch_adjustment = {
-                        k: base_launch_adjustment[k] + adjustment_rates[max(
+                        k:
+                        base_launch_adjustment[k] + adjustment_rates[max(
                             int(
                                 adjustment_rates.index(
                                     round(v - base_launch_adjustment[k], 2)) -
@@ -559,8 +562,8 @@ class Sinkhole(BaseEnvironment):
                     }
                 else:
                     # 盈利性不变或者上升时，再看公平性
-                    if self._metrics_for_durations['equality'][
-                            -1] < self._metrics_for_durations['equality'][-2]:
+                    if self._metrics_for_periods['equality'][
+                            -1] < self._metrics_for_periods['equality'][-2]:
                         # 公平性下降时，增加投放量
                         self._curr_launch_adjustment = {
                             k:
@@ -662,6 +665,14 @@ class Sinkhole(BaseEnvironment):
             for agent in self.world.agents
         }
 
+        agent_period = {
+            str(agent.idx): {
+                "period": self._periods / self._max_period,
+                "energy_cost": self.energy_cost
+            }
+            for agent in self.world.agents
+        }
+
         obs[self.world.planner.idx] = {
             "inventory-" + k: v * self.inv_scale
             for k, v in self.world.planner.inventory.items()
@@ -673,9 +684,13 @@ class Sinkhole(BaseEnvironment):
         })
 
         obs[self.world.planner.idx].update({
-            "endogenous-" + k: v * self.end_scale
+            "endogenous-" + k:
+            v * self.end_scale
             for k, v in self.world.planner.endogenous.items()
         })
+
+        obs[self.world.planner.idx].update(
+            {"period": self._periods / self._max_period})
 
         if self._planner_gets_spatial_info:
             obs[self.world.planner.idx].update(
@@ -692,6 +707,7 @@ class Sinkhole(BaseEnvironment):
                 obs[sidx].update(agent_escs[sidx])
                 obs[sidx].update(agent_ends[sidx])
                 obs[sidx].update(agent_util[sidx])
+                obs[sidx].update(agent_period[sidx])
 
         # Mobile agents only see within a window around their position
         else:
@@ -730,6 +746,7 @@ class Sinkhole(BaseEnvironment):
                 obs[sidx].update(agent_escs[sidx])
                 obs[sidx].update(agent_ends[sidx])
                 obs[sidx].update(agent_util[sidx])
+                obs[sidx].update(agent_period[sidx])
 
                 # Agent-wise planner info (gets crunched into the planner obs in the
                 # base scenario code)
@@ -787,7 +804,7 @@ class Sinkhole(BaseEnvironment):
 
     def check_if_done(self):
         # 当前时间步数大于episode长度 或者 当前周期数大于最大周期数,  done = {"__all__": True}
-        if self.world.timestep >= self._episode_length or self._durations >= self._max_duration:
+        if self.world.timestep >= self._episode_length or self._periods >= self._max_period:
             return True
         else:
             return False
@@ -842,9 +859,8 @@ class Sinkhole(BaseEnvironment):
         metrics["social/equality"] = social_metrics.get_equality(
             capability_endowments)
         metrics["social/graduation"] = np.sum([
-            1 if agent.endogenous['Capability'] >=
-            (self._durations + 1) * self._graduation_per_duration else 0
-            for agent in self.world.agents
+            1 if agent.endogenous['Capability'] >= (self._periods + 1) *
+            self._graduation_per_period else 0 for agent in self.world.agents
         ]) / self.world.n_agents
 
         metrics["social_welfare/planner"] = rewards.utility_for_planner(
