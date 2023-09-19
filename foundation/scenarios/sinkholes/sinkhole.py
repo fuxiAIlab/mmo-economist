@@ -45,6 +45,7 @@ class Sinkhole(BaseEnvironment):
                  player_monetary_cost_dist='pareto',
                  player_nonmonetary_cost_dist='normal',
                  player_utility_income_fxrate=1.0,
+                 planner_reward_type='utility1',
                  mixing_weight_gini_vs_coin=0.0,
                  **base_env_kwargs):
         super().__init__(*base_env_args, **base_env_kwargs)
@@ -151,6 +152,10 @@ class Sinkhole(BaseEnvironment):
             str(agent.idx): 0
             for agent in self.world.agents
         }
+        self.planner_reward_type = planner_reward_type
+        assert self.planner_reward_type in [
+            'utility1', 'utility1_norm', 'utility2', 'utility2_norm'
+        ]
 
     @property
     def base_launch_plan(self):
@@ -250,13 +255,15 @@ class Sinkhole(BaseEnvironment):
             'profitability': [],
             'equality': [],
             'final_graduation': [],
-            'period_graduation': []
+            'period_graduation': [],
+            'capability_avg': []
         }
         self._metrics_for_periods = {
             'profitability': [0.],
             'equality': [0.],
             'final_graduation': [0.],
-            'period_graduation': [0.]
+            'period_graduation': [0.],
+            'capability_avg': [0.]
         }
 
     @property
@@ -303,19 +310,65 @@ class Sinkhole(BaseEnvironment):
                     nonmonetary_cost_sensitivity)
 
         # (for the planner)
-        curr_optimization_metric[
-            self.world.planner.idx] = rewards.utility_for_planner(
-                monetary_incomes=np.array([
-                    self.starting_player_currency -
-                    agent.total_endowment("Currency")
-                    for agent in self.world.agents
-                ]),
-                nonmonetary_incomes=np.array([
-                    agent.state["endogenous"]["Capability"]
-                    for agent in self.world.agents
-                ]),
-                equality_weight=1 - self.mixing_weight_gini_vs_coin)
-
+        if self.planner_reward_type == 'utility1':
+            curr_optimization_metric[
+                self.world.planner.idx] = rewards.utility_for_planner(
+                    monetary_incomes=np.array([
+                        self.starting_player_currency -
+                        agent.total_endowment("Currency")
+                        for agent in self.world.agents
+                    ]),
+                    nonmonetary_incomes=np.array([
+                        agent.state["endogenous"]["Capability"]
+                        for agent in self.world.agents
+                    ]),
+                    equality_weight=1 - self.mixing_weight_gini_vs_coin)
+        elif self.planner_reward_type == 'utility1_norm':
+            curr_optimization_metric[
+                self.world.planner.
+                idx] = rewards.utility_normalized_for_planner(
+                    monetary_incomes=np.array([
+                        self.starting_player_currency -
+                        agent.total_endowment("Currency")
+                        for agent in self.world.agents
+                    ]),
+                    exp_monetary_incomes=self.starting_player_currency,
+                    nonmonetary_incomes=np.array([
+                        agent.state["endogenous"]["Capability"]
+                        for agent in self.world.agents
+                    ]),
+                    equality_weight=1 - self.mixing_weight_gini_vs_coin)
+        elif self.planner_reward_type == 'utility2':
+            curr_optimization_metric[
+                self.world.planner.idx] = rewards.utility2_for_planner(
+                    monetary_incomes=np.array([
+                        self.starting_player_currency -
+                        agent.total_endowment("Currency")
+                        for agent in self.world.agents
+                    ]),
+                    nonmonetary_incomes=np.array([
+                        agent.state["endogenous"]["Capability"]
+                        for agent in self.world.agents
+                    ]),
+                    equality_weight=1 - self.mixing_weight_gini_vs_coin)
+        elif self.planner_reward_type == 'utility2_norm':
+            curr_optimization_metric[
+                self.world.planner.
+                idx] = rewards.utility2_normalized_for_planner(
+                    monetary_incomes=np.array([
+                        self.starting_player_currency -
+                        agent.total_endowment("Currency")
+                        for agent in self.world.agents
+                    ]),
+                    exp_monetary_incomes=self.starting_player_currency,
+                    nonmonetary_incomes=np.array([
+                        agent.state["endogenous"]["Capability"]
+                        for agent in self.world.agents
+                    ]),
+                    exp_nonmonetary_incomes=100 * self._max_period,
+                    equality_weight=1 - self.mixing_weight_gini_vs_coin)
+        else:
+            raise NotImplementedError
         return curr_optimization_metric
 
     # The following methods must be implemented for each scenario
@@ -429,6 +482,8 @@ class Sinkhole(BaseEnvironment):
             metrics["social/final_graduation"])
         self._metrics_for_timesteps['period_graduation'].append(
             metrics["social/period_graduation"])
+        self._metrics_for_timesteps['capability_avg'].append(
+            metrics["social/capability_avg"])
 
         # 投放全部被获取 or 超过一定steps 开始新的投放周期
         if np.sum(all_resource_map) <= max(1, self._normal_wear_and_tear_rate * total_launch) or \
@@ -452,6 +507,8 @@ class Sinkhole(BaseEnvironment):
                 np.max(self._metrics_for_timesteps['final_graduation']))
             self._metrics_for_periods['period_graduation'].append(
                 np.max(self._metrics_for_timesteps['period_graduation']))
+            self._metrics_for_periods['capability_avg'].append(
+                np.max(self._metrics_for_timesteps['capability_avg']))
 
             self._metrics_for_timesteps = {
                 k: []
@@ -878,6 +935,7 @@ class Sinkhole(BaseEnvironment):
             currency_endowments) / self.world.n_agents
         metrics["social/equality"] = social_metrics.get_equality(
             capability_endowments)
+        metrics["social/capability_avg"] = np.mean(capability_endowments)
         metrics["social/final_graduation"] = np.sum([
             1 if agent.endogenous['Capability'] >= (self._periods + 1) *
             self._graduation_per_period else 0 for agent in self.world.agents
@@ -889,10 +947,29 @@ class Sinkhole(BaseEnvironment):
             >= self._graduation_per_period else 0
             for agent in self.world.agents
         ]) / self.world.n_agents
-
-        metrics["social_welfare/planner"] = rewards.utility_for_planner(
+        
+        if self.planner_reward_type == 'utility1':
+            metrics["social_welfare/planner"] = rewards.utility_for_planner(
             monetary_incomes=currency_endowments,
             nonmonetary_incomes=capability_endowments,
+            equality_weight=1.0)
+        elif self.planner_reward_type == 'utility1_norm':
+            metrics["social_welfare/planner"] = rewards.utility_normalized_for_planner(
+            monetary_incomes=currency_endowments,
+            exp_monetary_incomes=self.starting_player_currency,
+            nonmonetary_incomes=capability_endowments,
+            equality_weight=1.0)
+        elif self.planner_reward_type == 'utility2':
+            metrics["social_welfare/planner"] = rewards.utility2_for_planner(
+            monetary_incomes=currency_endowments,
+            nonmonetary_incomes=capability_endowments,
+            equality_weight=1.0)
+        elif self.planner_reward_type == 'utility2_norm':
+            metrics["social_welfare/planner"] = rewards.utility2_normalized_for_planner(
+            monetary_incomes=currency_endowments,
+            exp_monetary_incomes=self.starting_player_currency,
+            nonmonetary_incomes=capability_endowments,
+            exp_nonmonetary_incomes=100 * self._max_period,
             equality_weight=1.0)
 
         for agent in self.all_agents:
