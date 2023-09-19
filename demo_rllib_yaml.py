@@ -66,22 +66,36 @@ trainer_config.update(
     }
 )
 trainer = PPOTrainer(env=RLlibEnvWrapper, config=trainer_config)
-#trainer._restore('tmp_3.4641548739493224/checkpoint_9/checkpoint-9')
-#trainer._restore('ckpt_a/tmp_37.74633408773801/checkpoint_158/checkpoint-158')
-#trainer._restore('ckpt_a/tmp_39.47267792436246/checkpoint_193/checkpoint-193')
-#trainer._restore('tmp_6.800040908919548/checkpoint_1049/checkpoint-1049')
-NUM_ITERS = 1500
+
+trainer._restore('ckpts/t1/ckpt_80/rew_49.3971/checkpoint_226/checkpoint-226')
+# trainer._restore('ckpts/t1/ckpt_50/rew_34.4902/checkpoint_429/checkpoint-429')
+# trainer._restore('ckpts/t1/ckpt_20/rew_15.9123/checkpoint_350/checkpoint-350')
+NUM_ITERS = 2000
 cur_best=0
+import time
+pst_time=time.time()
 for iteration in range(NUM_ITERS):
     print(f'********** Iter : {iteration} **********')
     result = trainer.train()
+
+    #r1 = trainer.workers.local_worker().sampler.get_data().policy_batches
+    #print(r1['a']['rewards'].sum(), result['episode_reward_mean'])
+
+    cur_time = time.time()
+
     if 'p' in result['policy_reward_mean'].keys():
         if result['policy_reward_mean']['p']>cur_best:
-            # if result.get('episode_reward_mean')>cur_best:
+        # if result.get('episode_reward_mean')>cur_best:
             cur_best= result['policy_reward_mean']['p'] #result.get('episode_reward_mean')
-            trainer.save(f'./ckpt_mask/rew_{round(cur_best,4)}')
-        print(f"episode_reward_mean: {result.get('episode_reward_mean')}, "
-              f"a_rew:{result['policy_reward_mean']['a']} ",
-              f" p_rew:{result['policy_reward_mean']['p']}")
+            trainer.save(f'./ckpt_planner_80/rew_{round(cur_best,4)}')
+        iter_time=round(cur_time-pst_time,4)
+        episode_reward_mean=round(result.get('episode_reward_mean'),4)
+        a_rew=round(result['policy_reward_mean']['a'],4)
+        p_rew=round(result['policy_reward_mean']['p'],4)
+
+        print(f"time: {iter_time} episode_reward_mean: {episode_reward_mean} a_rew:{a_rew} ",
+              f" p_rew:{p_rew}, epsidoe_length: {result['episode_len_mean'] }")
+        pst_time=cur_time
     else:
         print(f"episode_reward_mean: {result.get('episode_reward_mean')}")
+trainer.save(f'./ckpt_planner_80/last_ckpt')

@@ -69,25 +69,39 @@ def generate_rollout_from_current_trainer_policy(
         dense_logs[idx]['profitability'] = profitability
         dense_logs[idx]['equality'] = equality
 
-    dense_logs['mon_sense'] =env_obj.env._player_monetary_cost_sensitivities
-    dense_logs['nonmon_sense']= env_obj.env._player_nonmonetary_cost_sensitivities
+        dense_logs[idx]['mon_sense'] =env_obj.env._player_monetary_cost_sensitivities
+        dense_logs[idx]['nonmon_sense']= env_obj.env._player_nonmonetary_cost_sensitivities
     return dense_logs
 
 
 
 ray.init(webui_host="127.0.0.1")
 
-config_path = os.path.join('./experiments', "config.yaml")
+
+# tmp
+import argparse
+parser = argparse.ArgumentParser()
+parser.add_argument('--adj', type=str, default='planner')
+parser.add_argument('--restore', type=str, default='')
+parser.add_argument('--cfg', type=str, default='')
+res =parser.parse_args()
+
+
+config_path = os.path.join('./experiments', res.cfg)
+# config_path = os.path.join('./experiments', "config_80_20.yaml")
 
 with open(config_path, "r") as f:
     run_configuration = yaml.safe_load(f)
 
 trainer_config = run_configuration.get("trainer")
+run_configuration["env"]["adjustemt_type"]=res.adj
+
 env_config = {
     "env_config_dict": run_configuration.get("env"),
     "num_envs_per_worker": trainer_config.get("num_envs_per_worker"),
 }
-print('test1')
+
+
 dummy_env = RLlibEnvWrapper(env_config, verbose=True)
 
 agent_policy_tuple = (
@@ -127,8 +141,27 @@ trainer_config.update(
 )
 trainer = PPOTrainer(env=RLlibEnvWrapper, config=trainer_config)
 # trainer._restore('ckpt/train_actor/rew_39.4727/checkpoint_193/checkpoint-193')
-trainer._restore('ckpt/train_planner/rew_6.8000/checkpoint_1049/checkpoint-1049')
+# trainer._restore('ckpt/train_planner/rew_6.8000/checkpoint_1049/checkpoint-1049')
+# trainer._restore('80_ckpt/res_1/rew_250.2054/checkpoint_98/checkpoint-98')
+# trainer._restore('80_ckpt/res_pos/rew_250.1932/checkpoint_187/checkpoint-187')
+# trainer._restore('ckpt_tmp/rew_201.3987/checkpoint_48/checkpoint-48')
+# trainer._restore('ckpts/t2/ckpt_80/rew_73.0672/checkpoint_452/checkpoint-452')
+# trainer._restore('ckpts/t1/ckpt_20/last_ckpt/checkpoint_500/checkpoint-500')
 
+
+if res.restore!='':
+    run_configuration["general"]["restore"]=res.restore
+if 'restore' in run_configuration['general'].keys():
+    trainer._restore(run_configuration['general']['restore'])
+    print(f"restore {run_configuration['general']['restore']} , {res.adj}")
+
+# num_dense_logs=4
+# dense_logs={}
+# for idx in range(num_dense_logs):
+#     dummy_env = RLlibEnvWrapper(env_config, verbose=True)
+#     res= generate_rollout_from_current_trainer_policy(trainer,dummy_env,num_dense_logs=1)
+#     dense_logs[idx]=res[0]
+# import ipdb;ipdb.set_trace()
 dense_logs = generate_rollout_from_current_trainer_policy(
     trainer,
     dummy_env,
@@ -138,10 +171,11 @@ dense_logs = generate_rollout_from_current_trainer_policy(
 print('monetary sensetivities:',dummy_env.env._player_monetary_cost_sensitivities)
 print('nonmonetary sensetivities:',dummy_env.env._player_nonmonetary_cost_sensitivities)
 
+# test_config='20'
 p1,p2,p3,p4=plotting.breakdown(dense_logs[0])
-# p1.savefig('p1.png')
-# p2.savefig('p2.png')
-# p3.savefig('p3.png')
-# p4.savefig('p4.png')
-np.save('dense_logs.npy',dense_logs)
+p1.savefig(f'p1_{res.cfg[:10]}_{env_config["env_config_dict"]["adjustemt_type"]}.png')
+p2.savefig(f'p2_{res.cfg[:10]}_{env_config["env_config_dict"]["adjustemt_type"]}.png')
+p3.savefig(f'p3_{res.cfg[:10]}_{env_config["env_config_dict"]["adjustemt_type"]}.png')
+p4.savefig(f'p4_{res.cfg[:10]}_{env_config["env_config_dict"]["adjustemt_type"]}.png')
+np.save(f'{res.cfg[:10]}_{env_config["env_config_dict"]["adjustemt_type"]}_dense_logs.npy',dense_logs)
 
