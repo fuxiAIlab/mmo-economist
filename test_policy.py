@@ -141,13 +141,6 @@ trainer_config.update(
 )
 trainer = PPOTrainer(env=RLlibEnvWrapper, config=trainer_config)
 # trainer._restore('ckpt/train_actor/rew_39.4727/checkpoint_193/checkpoint-193')
-# trainer._restore('ckpt/train_planner/rew_6.8000/checkpoint_1049/checkpoint-1049')
-# trainer._restore('80_ckpt/res_1/rew_250.2054/checkpoint_98/checkpoint-98')
-# trainer._restore('80_ckpt/res_pos/rew_250.1932/checkpoint_187/checkpoint-187')
-# trainer._restore('ckpt_tmp/rew_201.3987/checkpoint_48/checkpoint-48')
-# trainer._restore('ckpts/t2/ckpt_80/rew_73.0672/checkpoint_452/checkpoint-452')
-# trainer._restore('ckpts/t1/ckpt_20/last_ckpt/checkpoint_500/checkpoint-500')
-
 
 if res.restore!='':
     run_configuration["general"]["restore"]=res.restore
@@ -155,13 +148,6 @@ if 'restore' in run_configuration['general'].keys():
     trainer._restore(run_configuration['general']['restore'])
     print(f"restore {run_configuration['general']['restore']} , {res.adj}")
 
-# num_dense_logs=4
-# dense_logs={}
-# for idx in range(num_dense_logs):
-#     dummy_env = RLlibEnvWrapper(env_config, verbose=True)
-#     res= generate_rollout_from_current_trainer_policy(trainer,dummy_env,num_dense_logs=1)
-#     dense_logs[idx]=res[0]
-# import ipdb;ipdb.set_trace()
 dense_logs = generate_rollout_from_current_trainer_policy(
     trainer,
     dummy_env,

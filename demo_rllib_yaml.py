@@ -17,7 +17,8 @@ from ray.rllib.agents.ppo import PPOTrainer
 
 ray.init(webui_host='127.0.0.1')
 
-config_path = os.path.join('./experiments', "config_80_20.yaml")
+config_path = os.path.join('./experiments', "config_50_50.yaml")
+# config_path = os.path.join('./experiments', "config_80_20.yaml")
 
 with open(config_path, "r") as f:
     run_configuration = yaml.safe_load(f)
@@ -67,8 +68,8 @@ trainer_config.update(
 )
 trainer = PPOTrainer(env=RLlibEnvWrapper, config=trainer_config)
 
-trainer._restore('ckpts/t1/ckpt_80/rew_49.3971/checkpoint_226/checkpoint-226')
-# trainer._restore('ckpts/t1/ckpt_50/rew_34.4902/checkpoint_429/checkpoint-429')
+# trainer._restore('ckpts/t1/ckpt_80/rew_49.3971/checkpoint_226/checkpoint-226')
+trainer._restore('ckpts/t1/ckpt_50/rew_34.4902/checkpoint_429/checkpoint-429')
 # trainer._restore('ckpts/t1/ckpt_20/rew_15.9123/checkpoint_350/checkpoint-350')
 NUM_ITERS = 2000
 cur_best=0
@@ -87,7 +88,7 @@ for iteration in range(NUM_ITERS):
         if result['policy_reward_mean']['p']>cur_best:
         # if result.get('episode_reward_mean')>cur_best:
             cur_best= result['policy_reward_mean']['p'] #result.get('episode_reward_mean')
-            trainer.save(f'./ckpt_planner_80/rew_{round(cur_best,4)}')
+            trainer.save(f'./ckpt_planner_50/rew_{round(cur_best,4)}')
         iter_time=round(cur_time-pst_time,4)
         episode_reward_mean=round(result.get('episode_reward_mean'),4)
         a_rew=round(result['policy_reward_mean']['a'],4)
@@ -98,4 +99,4 @@ for iteration in range(NUM_ITERS):
         pst_time=cur_time
     else:
         print(f"episode_reward_mean: {result.get('episode_reward_mean')}")
-trainer.save(f'./ckpt_planner_80/last_ckpt')
+trainer.save(f'./ckpt_planner_50/last_ckpt')

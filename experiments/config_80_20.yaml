@@ -62,7 +62,7 @@ env:
   normal_wear_and_tear_rate: 0.05
   timesteps_for_force_refresh_launch: 300 #500
   adjustemt_type: planner
-  planner_reward_type: utility2 # ['utility1', 'utility1_norm', 'utility2', 'utility2_norm']
+  planner_reward_type: utility1 # ['utility1', 'utility1_norm', 'utility2', 'utility2_norm']
 general:
 # not used, deprecated config        
 #  ckpt_frequency_steps: 750000
@@ -71,7 +71,7 @@ general:
 #  gpus: 0
 #  restore_tf_weights_agents: ''
 #  restore_tf_weights_planner: ''
-  train_planner: true #false
+  train_planner: false #true #false
 agent_policy:
   clip_param: 0.2
   entropy_coeff: 0.025
