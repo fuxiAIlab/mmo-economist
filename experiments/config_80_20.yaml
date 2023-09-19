@@ -62,6 +62,7 @@ env:
   normal_wear_and_tear_rate: 0.05
   timesteps_for_force_refresh_launch: 500
   adjustemt_type: planner
+  planner_reward_type: utility1_norm # ['utility1', 'utility1_norm', 'utility2', 'utility2_norm']
 general:
 # not used, deprecated config        
 #  ckpt_frequency_steps: 750000
