@@ -164,5 +164,9 @@ class LaunchReadjustment(BaseComponent):
 
         return masks
 
+    def additional_reset_steps(self):
+        self.adjustment_cycle_pos = 1
+        self.adjustments = []
+
     def get_dense_log(self):
         return self.adjustments
