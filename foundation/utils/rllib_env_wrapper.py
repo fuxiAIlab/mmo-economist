@@ -217,13 +217,13 @@ class RLlibEnvWrapper(MultiAgentEnv):
         obs, rew, done, info = self.env.step(action_dict)
 
         # modify mask of planner, no explicit affect on performance
-        for idx, resource in enumerate(['Exp', 'Mat', 'Token']):
-                # can do any action except no-op
-                obs['p']['action_mask'][6*idx] = 0.0
-                # keep last op
-                if np.sum(obs['p']['action_mask']) < 4:
-                    resource_idx=action_dict['p'][idx]
-                    obs['p']['action_mask'][6*idx+resource_idx]=1.0
+        # for idx, resource in enumerate(['Exp', 'Mat', 'Token']):
+        #         # can do any action except no-op
+        #         obs['p']['action_mask'][6*idx] = 0.0
+        #         # keep last op
+        #         if np.sum(obs['p']['action_mask']) < 4:
+        #             resource_idx=action_dict['p'][idx]
+        #             obs['p']['action_mask'][6*idx+resource_idx]=1.0
 
 
         # assert isinstance(obs[self.sample_agent_idx]

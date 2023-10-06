@@ -1036,6 +1036,10 @@ class BaseEnvironment(ABC):
             rew = self.collate_agent_rew(rew)
             info = self.collate_agent_info(info)
 
+        obs = {k: v for k, v in obs.items() if k !='p'}
+        rew = {k: v for k, v in rew.items() if k !='p'}
+        info = {k: v for k, v in info.items() if k !='p'}
+
         return obs, rew, done, info
 
     def check_if_done(self):
