@@ -9,10 +9,10 @@ env:
   components:
   - Task:
       move_labor: 1.0
-      collect_labor: 2.0 #10.0
+      collect_labor: 1.0 #10.0
       skill_dist: none
   - Upgrade:
-      upgrade_income: 10.0
+      upgrade_income: 2.0 #3.0
       upgrade_labor: 1.0
       payment_max_skill_multiplier: 1
       skill_dist: none
@@ -33,7 +33,7 @@ env:
       adjustment_rate_min: 0.0 
       adjustment_rate_bin: 0.1
   isoelastic_eta: 0.23
-  energy_cost: 0.008 #0.21
+  energy_cost: 0.008 #0.01 #0.008 #0.21
   energy_warmup_constant: 10000
   energy_warmup_method: auto
   episode_length: 3000 #5000
@@ -61,17 +61,10 @@ env:
     Token: 50
   normal_wear_and_tear_rate: 0.05
   timesteps_for_force_refresh_launch: 300 #500
-  adjustemt_type: planner
-  planner_reward_type: utility2 # ['utility1', 'utility1_norm', 'utility2', 'utility2_norm']
+  adjustemt_type: random-asy # fixed random-asy random-syn greedy-equ greedy-pro planner
+  planner_reward_type: utility2_norm # ['utility1', 'utility1_norm', 'utility2', 'utility2_norm']
 general:
-# not used, deprecated config        
-#  ckpt_frequency_steps: 750000
-#  cpus: 6
-#  episodes: 10
-#  gpus: 0
-#  restore_tf_weights_agents: ''
-#  restore_tf_weights_planner: ''
-  train_planner: true #false
+  train_planner: false #true #false
 agent_policy:
   clip_param: 0.2
   entropy_coeff: 0.025
@@ -81,7 +74,7 @@ agent_policy:
   kl_coeff: 0.0
   kl_target: 0.01
   lambda: 0.98
-  lr: 0.0001
+  lr: 0.0002
   lr_schedule: null
   model:
     custom_model: keras_conv_lstm
@@ -107,7 +100,7 @@ planner_policy:
   kl_target: 0.01
   lambda: 0.98
   lr: 0.0001
-  lr_schedule: null
+  lr_schedule:  null
   model:
     custom_model: keras_conv_lstm
     custom_options:
@@ -137,7 +130,7 @@ trainer:
   num_sgd_iter: 2
   num_workers: 8 
   observation_filter: NoFilter
-  rollout_fragment_length: 600 #200
+  rollout_fragment_length: 300 #600
   seed: null
   sgd_minibatch_size: 2000 #1500
   shuffle_sequences: true

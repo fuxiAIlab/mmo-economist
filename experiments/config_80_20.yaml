@@ -9,10 +9,10 @@ env:
   components:
   - Task:
       move_labor: 1.0
-      collect_labor: 2.0 #10.0
+      collect_labor: 1.0 #10.0
       skill_dist: none
   - Upgrade:
-      upgrade_income: 10.0
+      upgrade_income: 2.0
       upgrade_labor: 1.0
       payment_max_skill_multiplier: 1
       skill_dist: none
@@ -61,8 +61,8 @@ env:
     Token: 80 
   normal_wear_and_tear_rate: 0.05
   timesteps_for_force_refresh_launch: 300 #500
-  adjustemt_type: planner
-  planner_reward_type: utility1 # ['utility1', 'utility1_norm', 'utility2', 'utility2_norm']
+  adjustemt_type: planner #fixed random-asy random-syn greedy-equ greedy-pro planner
+  planner_reward_type: utility2_norm # ['utility1', 'utility1_norm', 'utility2', 'utility2_norm']
 general:
 # not used, deprecated config        
 #  ckpt_frequency_steps: 750000
@@ -81,7 +81,7 @@ agent_policy:
   kl_coeff: 0.0
   kl_target: 0.01
   lambda: 0.98
-  lr: 0.0001
+  lr: 0.0002
   lr_schedule: null
   model:
     custom_model: keras_conv_lstm

@@ -15,7 +15,9 @@ import random
 import warnings
 
 import numpy as np
+from foundation.scenarios.utils import social_metrics
 import foundation
+
 from gym import spaces
 from gym.utils import seeding
 from ray.rllib.env.multi_agent_env import MultiAgentEnv
@@ -211,22 +213,22 @@ class RLlibEnvWrapper(MultiAgentEnv):
 
     def step(self, action_dict):
 
-        # used for test no-op planner, set adj num to 100%(no-adjustment) for all resources
-        # action_dict['p'][0]=3;action_dict['p'][1]=3;action_dict['p'][2]=3;
-
         obs, rew, done, info = self.env.step(action_dict)
 
-        # modify mask of planner, no explicit affect on performance
-        for idx, resource in enumerate(['Exp', 'Mat', 'Token']):
-                # can do any action except no-op
-                obs['p']['action_mask'][6*idx] = 0.0
-                # keep last op
-                if np.sum(obs['p']['action_mask']) < 4:
-                    resource_idx=action_dict['p'][idx]
-                    obs['p']['action_mask'][6*idx+resource_idx]=1.0
-
+        info={k: {'res':np.array([-1.0,-1.0,-1.0]),"training_enabled":True} for k in action_dict.keys()}
+        if self.env._steps_in_period==0:
+            metrics=self.env.scenario_metrics()
+            profit,equality,capability=metrics['social/profitability'],\
+                                      metrics['social/equality'],\
+                                      metrics['social/capability_avg']
+            info['p']['res'] = np.array([profit, equality, capability])
+        else:
+            capability_endowments=np.array(
+                [agent.endogenous['Capability'] for agent in self.env.world.agents])            
+            equality = social_metrics.get_equality(
+            capability_endowments)
+            info['p']['res'] = np.array([-1.0, equality, -1.0])
 
         # assert isinstance(obs[self.sample_agent_idx]
         #                   ["action_mask"], np.ndarray)
-
         return recursive_list_to_np_array(obs), rew, done, info
