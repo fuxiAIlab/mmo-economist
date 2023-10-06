@@ -12,30 +12,16 @@ from foundation.utils.rllib_env_wrapper import RLlibEnvWrapper
 from ray.rllib.agents.ppo import PPOTrainer
 # from ray.rllib.algorithms.ppo import PPO
 from datetime import datetime
-import tempfile
-from ray.tune.logger import UnifiedLogger
+
 ray.init(webui_host='127.0.0.1')
-def custom_log_creator(custom_path, custom_str):
-
-    timestr = datetime.today().strftime("%Y-%m-%d_%H-%M-%S")
-    logdir_prefix = "{}_{}".format(custom_str, timestr)
-
-    def logger_creator(config):
-
-        if not os.path.exists(custom_path):
-            os.makedirs(custom_path)
-        logdir = tempfile.mkdtemp(prefix=logdir_prefix, dir=custom_path)
-        return UnifiedLogger(config, logdir, loggers=None)
-
-    return logger_creator
 
 def parse_args():
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument('--adj', type=str, default='')# adjust type
+    parser.add_argument('--adj', type=str, default='random-asy')# adjust type
     parser.add_argument('--restore', type=str, default='')# restore ckpt path
-    parser.add_argument('--cfg', type=str, default='')# config_50_50.yaml
-    parser.add_argument('--num-iter', type=int, default=-1)# train iter
+    parser.add_argument('--cfg', type=str, default='config_50_50')# config_50_50.yaml
+    parser.add_argument('--num-iter', type=int, default=2)# train iter
     parser.add_argument('--seed', type=int, default=0)
     parser.add_argument('--phase', type=int, default=1)# 1/2
     res =parser.parse_args()
@@ -58,15 +44,14 @@ def on_episode_step(info):
 def on_episode_end(info):
     episode = info["episode"]
     res=np.array(episode.user_data["res"])
-    idx=np.where(res[:,0]>0)[0] #idx of planner action
+    idx=np.where(res[:,0]>0)[0]
     equality=np.split(res[:, 1], idx + 1)
     equality=np.mean([np.mean(_) for _ in equality if len(_)>0])
     # print(f'profit: {res[idx,0]}, equality: {equality}, capability: {res[idx,2]}')
 
-    info["episode"].custom_metrics["profit"] = res[idx[-1],0]#np.mean(res[idx,0])
+    info["episode"].custom_metrics["profit"] = np.mean(res[idx,0])
     info["episode"].custom_metrics["equality"] = equality
-    info["episode"].custom_metrics["capability"] = res[idx[-1],2]#np.mean(res[idx,2])
-    info["episode"].custom_metrics["equXcap"] = np.mean(res[:,1]*res[:,2])
+    info["episode"].custom_metrics["capability"] = np.mean(res[idx,2])
     # info["episode"].hist_data["res"] = np.mean(episode.user_data["res"])
 
 def init_trainer(args):
@@ -85,10 +70,7 @@ def init_trainer(args):
 
     if args.adj!='':
         run_configuration["env"]["adjustemt_type"]=args.adj
-    if args.phase==2:
-        run_configuration["general"]["train_planner"]=True
-    else:
-        run_configuration["general"]["train_planner"] = False
+
     env_config = {
         "env_config_dict": run_configuration.get("env"),
         "num_envs_per_worker": trainer_config.get("num_envs_per_worker"),
@@ -142,12 +124,11 @@ def init_trainer(args):
                                  }
 
     exp_dir='runs/'
-    log_dir=f"/phase_{args.phase}_{run_configuration['env']['adjustemt_type']}_{cfg_path[:12]}"
-    save_dir=f"runs/phase_{args.phase}_{run_configuration['env']['adjustemt_type']}_seed_{args.seed}/{cfg_path[:12]}"
+    log_dir=f"/phase_{args.phase}_{run_configuration['env']['adjustemt_type']}_{cfg_path[:9]}"
+    save_dir=f"runs/phase_{args.phase}_{run_configuration['env']['adjustemt_type']}/{cfg_path[:9]}"
 
-    trainer = PPOTrainer(env=RLlibEnvWrapper, config=trainer_config,
-                         logger_creator=custom_log_creator(save_dir,'test'))
-                         # logger_creator=custom_log_creator(exp_dir,'test'))
+    trainer = PPOTrainer(env=RLlibEnvWrapper, config=trainer_config)
+
     return trainer,save_dir
 
 def train(trainer,args,save_dir):
@@ -172,29 +153,27 @@ def train(trainer,args,save_dir):
                 cur_best=result['policy_reward_mean'][save_metric]
                 trainer.save(f"{save_dir}/rew_{round(cur_best,4)}")
             iter_time=round(cur_time-pst_time,4)
-            episode_reward_mean=round(result.get('episode_reward_mean'),6)
-            a_rew=round(result['policy_reward_mean']['a'],6)
-            p_rew=round(result['policy_reward_mean']['p'],6)
+            episode_reward_mean=round(result.get('episode_reward_mean'),4)
+            a_rew=round(result['policy_reward_mean']['a'],4)
+            p_rew=round(result['policy_reward_mean']['p'],4)
 
             if 'profit_mean' in result['custom_metrics'].keys():
-                profit=round(result['custom_metrics']['profit_mean'],6)
-                equality=round(result['custom_metrics']['equality_mean'],6)
-                capability=round(result['custom_metrics']['capability_mean'],6)
-                equxcap=round(result['custom_metrics']['equXcap_mean'],6)
+                profit=round(result['custom_metrics']['profit_mean'],4)
+                equality=round(result['custom_metrics']['equality_mean'],4)
+                capability=round(result['custom_metrics']['capability_mean'],4)
                 print(f"time: {iter_time} epi_rew: {episode_reward_mean} a_rew:{a_rew} ",
                       f" p_rew:{p_rew}, epi_len: {result['episode_len_mean'] }",
-                      f" pro:{profit} equ:{equality} cap:{capability} ,prod:{equxcap}")
-                metric={'iter':iteration,'epi_len':result['episode_len_mean'],
-                        'epi_rew':episode_reward_mean,
+                      f" pro:{profit} equ:{equality} cap:{capability} ")
+                metric={'iter':iteration,'epi_rew':episode_reward_mean,
                         'a_rew':a_rew,'p_rew':p_rew,
                         'profit':profit,'equlity':equality,
-                        'capability':capability,'equXcap':equxcap
+                        'capability':capability,
                         }
                 metric_log.append(metric)
             pst_time=cur_time
         else:
             print(f"episode_reward_mean: {result.get('episode_reward_mean')}")
-        if iteration  % 10 == 9 or True:
+        if iteration  % 10 == 9 :
             trainer.save(f"{save_dir}/iter_{iteration}")
             print(f"save ckpt at iter {iteration}")
     np.save(os.path.join(save_dir,'metric.npy'),metric_log)

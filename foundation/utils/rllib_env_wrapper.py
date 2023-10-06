@@ -223,11 +223,15 @@ class RLlibEnvWrapper(MultiAgentEnv):
                                       metrics['social/capability_avg']
             info['p']['res'] = np.array([profit, equality, capability])
         else:
-            capability_endowments=np.array(
-                [agent.endogenous['Capability'] for agent in self.env.world.agents])            
-            equality = social_metrics.get_equality(
-            capability_endowments)
-            info['p']['res'] = np.array([-1.0, equality, -1.0])
+            metrics = self.env.scenario_metrics()
+            profit, equality, capability = metrics['social/profitability'], \
+                                           metrics['social/equality'], \
+                                           metrics['social/capability_avg']
+            # capability_endowments=np.array(
+            #     [agent.endogenous['Capability'] for agent in self.env.world.agents])
+            # equality = social_metrics.get_equality(
+            # capability_endowments)
+            info['p']['res'] = np.array([-1.0, equality, capability])
 
         # assert isinstance(obs[self.sample_agent_idx]
         #                   ["action_mask"], np.ndarray)
