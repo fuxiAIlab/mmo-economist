@@ -194,7 +194,7 @@ def train(trainer,args,save_dir):
             pst_time=cur_time
         else:
             print(f"episode_reward_mean: {result.get('episode_reward_mean')}")
-        if iteration  % 10 == 9 or True:
+        if iteration  % 10 == 9:
             trainer.save(f"{save_dir}/iter_{iteration}")
             print(f"save ckpt at iter {iteration}")
     np.save(os.path.join(save_dir,'metric.npy'),metric_log)
