@@ -707,6 +707,19 @@ class BaseEnvironment(ABC):
         for aidx, amask in self._generate_masks(flatten_masks=flatten_masks).items():
             obs[aidx]["action_mask"] = amask
 
+        #### used for getting flatten obs for training
+        def get_flattened_obs(self, obs):
+            flat_obs = []
+            for k in obs.keys():
+                if isinstance(obs[k], float):
+                    flat_obs.append(np.array([obs[k]]))
+                else:
+                    flat_obs.append(np.array(obs[k]).flatten())
+            return np.concatenate(flat_obs)
+
+        for key in obs.keys():
+            obs[key] = get_flattened_obs(self, obs[key])
+
         return obs
 
     def _generate_masks(self, flatten_masks=True):

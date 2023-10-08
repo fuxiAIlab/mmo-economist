@@ -44,12 +44,14 @@ planner_policy_tuple = (
     run_configuration.get("planner_policy"),
 )
 
-policies = {"a": agent_policy_tuple, "p": planner_policy_tuple}
-def policy_mapping_fun(i): return "a" if str(i).isdigit() else "p"
+policies = {"a": agent_policy_tuple}#, "p": planner_policy_tuple}
+# policies = {"a": agent_policy_tuple, "p": planner_policy_tuple}
+# def policy_mapping_fun(i): return "a" if str(i).isdigit() else "p"
+def policy_mapping_fun(i): return "a"# if str(i).isdigit() else "p"
 
 
 if run_configuration["general"]["train_planner"]:
-    policies_to_train = ["a", "p"]
+    policies_to_train = ['a']#["a", "p"]
 else:
     policies_to_train = ["a"]
 
@@ -69,9 +71,8 @@ trainer_config.update(
 trainer = PPOTrainer(env=RLlibEnvWrapper, config=trainer_config)
 
 # trainer._restore('ckpts/t1/ckpt_80/rew_49.3971/checkpoint_226/checkpoint-226')
-trainer._restore('ckpts/t1/ckpt_50/rew_34.4902/checkpoint_429/checkpoint-429')
 # trainer._restore('ckpts/t1/ckpt_20/rew_15.9123/checkpoint_350/checkpoint-350')
-NUM_ITERS = 2000
+NUM_ITERS = 200
 cur_best=0
 import time
 pst_time=time.time()

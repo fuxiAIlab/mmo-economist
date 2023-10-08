@@ -207,14 +207,16 @@ class RLlibEnvWrapper(MultiAgentEnv):
 
     def reset(self, *args, **kwargs):
         obs = self.env.reset(*args, **kwargs)
+        if 'p' in obs.keys():_=obs.pop('p')
         return recursive_list_to_np_array(obs)
 
     def step(self, action_dict):
-
         # used for test no-op planner, set adj num to 100%(no-adjustment) for all resources
         # action_dict['p'][0]=3;action_dict['p'][1]=3;action_dict['p'][2]=3;
-
+        if 'p' in action_dict.keys(): _ = action_dict.pop('p')
         obs, rew, done, info = self.env.step(action_dict)
+        if 'p' in obs.keys(): _ = obs.pop('p')
+        if 'p' in rew.keys(): _ = rew.pop('p')
 
         # modify mask of planner, no explicit affect on performance
         # for idx, resource in enumerate(['Exp', 'Mat', 'Token']):
