@@ -81,11 +81,12 @@ agent_policy:
   kl_coeff: 0.0
   kl_target: 0.01
   lambda: 0.98
-  lr: 0.0001
+  lr: 0.0002
   lr_schedule: null
   model:
-    custom_model: keras_conv
+    custom_model: keras_dqn_conv
     custom_options:
+#    custom_model_config:
       fc_dim: 128
       idx_emb_dim: 4
       input_emb_vocab: 100
@@ -96,7 +97,7 @@ agent_policy:
   use_gae: true
   vf_clip_param: 50.0
   vf_loss_coeff: 0.05
-  vf_share_layers: false  
+  vf_share_layers: false
 planner_policy:
   clip_param: 0.2
   entropy_coeff: 0.025
@@ -110,7 +111,7 @@ planner_policy:
   lr_schedule: null
   model:
     custom_model: keras_conv
-    custom_options:
+    custom_model_config:
       fc_dim: 256
       idx_emb_dim: 4
       input_emb_vocab: 100
@@ -123,7 +124,7 @@ planner_policy:
   vf_loss_coeff: 0.05
   vf_share_layers: false
 trainer:
-  batch_mode: truncate_episodes
+  batch_mode: truncate_episodes #complete_episodes
   env_config: null
   local_tf_session_args:
     inter_op_parallelism_threads: 2
@@ -134,13 +135,12 @@ trainer:
   num_envs_per_worker: 1
   num_gpus: 0
   num_gpus_per_worker: 0
-  num_sgd_iter: 2
-  num_workers: 8 
+#  num_sgd_iter: 2
+  num_workers: 8
   observation_filter: NoFilter
-  rollout_fragment_length: 300 #200
   seed: null
-  sgd_minibatch_size: 2000 #1500
-  shuffle_sequences: true
+#  sgd_minibatch_size: 2000 #1500
+#  shuffle_sequences: true
   tf_session_args:
     allow_soft_placement: true
     device_count:
@@ -149,6 +149,26 @@ trainer:
     gpu_options:
       allow_growth: true
     inter_op_parallelism_threads: 2
-    intra_op_parallelism_threads: 4 
+    intra_op_parallelism_threads: 4
     log_device_placement: false
+
+  # no use for vanilla dqn
+#  v_min: -10.0
+#  v_max: 10.0
+  hiddens: []
+  gamma: 0.998
+  lr: 0.0001
+
   train_batch_size: 8000 # 6000
+  rollout_fragment_length: 3000 #200
+  buffer_size: 600000 #40000  #100000
+  target_network_update_freq: 120000 #160000  #16000  #40000
+  timesteps_per_iteration: 24000 #8000
+  exploration_config:
+    type: 'EpsilonGreedy'
+    initial_epsilon: 1.0
+    final_epsilon: 0.02
+    epsilon_timesteps: 1000000
+#  prioritized_replay: True
+#  prioritized_replay_alpha: 0.8
+  min_iter_time_s: 1

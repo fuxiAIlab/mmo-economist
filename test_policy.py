@@ -86,7 +86,6 @@ parser.add_argument('--restore', type=str, default='')
 parser.add_argument('--cfg', type=str, default='')
 res =parser.parse_args()
 
-
 config_path = os.path.join('./experiments', res.cfg)
 # config_path = os.path.join('./experiments', "config_80_20.yaml")
 

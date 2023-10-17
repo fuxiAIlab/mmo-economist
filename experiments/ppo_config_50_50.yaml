@@ -81,10 +81,10 @@ agent_policy:
   kl_coeff: 0.0
   kl_target: 0.01
   lambda: 0.98
-  lr: 0.0001
+  lr: 0.0003
   lr_schedule: null
   model:
-    custom_model: keras_conv
+    custom_model: keras_cc_conv
     custom_options:
       fc_dim: 128
       idx_emb_dim: 4
@@ -109,7 +109,7 @@ planner_policy:
   lr: 0.0001
   lr_schedule: null
   model:
-    custom_model: keras_conv
+    custom_model: keras_cc_conv
     custom_options:
       fc_dim: 256
       idx_emb_dim: 4
@@ -134,10 +134,10 @@ trainer:
   num_envs_per_worker: 1
   num_gpus: 0
   num_gpus_per_worker: 0
-  num_sgd_iter: 2
-  num_workers: 8 
+  num_sgd_iter: 3
+  num_workers: 2
   observation_filter: NoFilter
-  rollout_fragment_length: 300 #200
+  rollout_fragment_length: 600 #200
   seed: null
   sgd_minibatch_size: 2000 #1500
   shuffle_sequences: true

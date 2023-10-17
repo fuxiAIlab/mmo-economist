@@ -207,24 +207,36 @@ class RLlibEnvWrapper(MultiAgentEnv):
 
     def reset(self, *args, **kwargs):
         obs = self.env.reset(*args, **kwargs)
+        if 'p' in obs.keys(): _=obs.pop('p')
         return recursive_list_to_np_array(obs)
 
     def step(self, action_dict):
 
-        # used for test no-op planner, set adj num to 100%(no-adjustment) for all resources
-        # action_dict['p'][0]=3;action_dict['p'][1]=3;action_dict['p'][2]=3;
+        if 'p' in action_dict.keys(): _=action_dict.pop('p')
 
         obs, rew, done, info = self.env.step(action_dict)
+        if 'p' in obs.keys(): _=obs.pop('p')
+        if 'p' in rew.keys(): _=rew.pop('p')
+        if 'p' in done.keys(): _=done.pop('p')
+        if 'p' in info.keys(): _=info.pop('p')
 
-        # modify mask of planner, no explicit affect on performance
-        # for idx, resource in enumerate(['Exp', 'Mat', 'Token']):
-        #         # can do any action except no-op
-        #         obs['p']['action_mask'][6*idx] = 0.0
-        #         # keep last op
-        #         if np.sum(obs['p']['action_mask']) < 4:
-        #             resource_idx=action_dict['p'][idx]
-        #             obs['p']['action_mask'][6*idx+resource_idx]=1.0
-
+        info = {k: {'res': np.array([-1.0, -1.0, -1.0]), "training_enabled": True} for k in action_dict.keys()}
+        if self.env._steps_in_period == 0:
+            metrics = self.env.scenario_metrics()
+            profit, equality, capability = metrics['social/profitability'], \
+                                           metrics['social/equality'], \
+                                           metrics['social/capability_avg']
+            info['0']['res'] = np.array([profit, equality, capability])
+        else:
+            metrics = self.env.scenario_metrics()
+            profit, equality, capability = metrics['social/profitability'], \
+                                           metrics['social/equality'], \
+                                           metrics['social/capability_avg']
+            # capability_endowments=np.array(
+            #     [agent.endogenous['Capability'] for agent in self.env.world.agents])
+            # equality = social_metrics.get_equality(
+            # capability_endowments)
+            info['0']['res'] = np.array([-1.0, equality, capability])
 
         # assert isinstance(obs[self.sample_agent_idx]
         #                   ["action_mask"], np.ndarray)
