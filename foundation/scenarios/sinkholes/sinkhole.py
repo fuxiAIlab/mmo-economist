@@ -156,6 +156,7 @@ class Sinkhole(BaseEnvironment):
         assert self.planner_reward_type in [
             'utility1', 'utility1_norm', 'utility2', 'utility2_norm'
         ]
+        self.obs_seq=['world-map','world-idx_map','time','flat','action_mask']
 
     @property
     def base_launch_plan(self):
@@ -833,7 +834,18 @@ class Sinkhole(BaseEnvironment):
                 obs["p" + sidx].update(agent_util[sidx])
                 if self._planner_gets_spatial_info:
                     obs["p" + sidx].update(agent_locs[sidx])
-
+        # def get_flatten_obs(obs_dict):
+        #     obs=[]
+        #     for k in self.obs_seq:
+        #         if isinstance(obs_dict[k], (int, float, np.floating, np.integer)):
+        #             obs.append([obs_dict[k]])
+        #         else:
+        #             obs.append(obs_dict[k])
+        #     return np.concatenate(obs,axis=0)
+        # import ipdb;ipdb.set_trace()
+        # for k in obs.keys():
+        #     if k!=self.world.planner.idx:
+        #         obs[k] = get_flatten_obs(obs[k])
         return obs
 
     def compute_reward(self):

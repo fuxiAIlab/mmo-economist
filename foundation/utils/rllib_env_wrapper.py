@@ -20,7 +20,19 @@ from gym import spaces
 from gym.utils import seeding
 from ray.rllib.env.multi_agent_env import MultiAgentEnv
 
+import psutil
+import subprocess
+import gc
 _BIG_NUMBER = 1e20
+def collectRemoveMemoryGarbage( __percThre__ = 10.0):
+    if psutil.virtual_memory().percent >= __percThre__:
+        _ = gc.collect()
+
+obs_seq = ['world-map', 'world-idx_map', 'time', 'flat', 'action_mask']
+def get_flatten_obs(obs_dict):
+    return np.concatenate([
+        np.array(obs_dict[k]).flatten()
+        for k in obs_seq], axis=0)
 
 
 def recursive_list_to_np_array(d):
@@ -40,7 +52,6 @@ def recursive_list_to_np_array(d):
         return new_d
     raise AssertionError
 
-
 def pretty_print(dictionary):
     for key in dictionary:
         print("{:15s}: {}".format(key, dictionary[key].shape))
@@ -55,12 +66,16 @@ class RLlibEnvWrapper(MultiAgentEnv):
     """
 
     def __init__(self, env_config, verbose=False):
-        self.env_config_dict = env_config["env_config_dict"]
+        #self.env_config_dict = env_config["env_config_dict"]
+        if 'map_name' in env_config.keys():
+            _=env_config.pop('map_name')
+        self.env_config_dict = env_config
 
         # Adding env id in the case of multiple environments
         if hasattr(env_config, "worker_index"):
             self.env_id = (
-                env_config["num_envs_per_worker"] *
+                # env_config["num_envs_per_worker"] *
+                1 *
                 (env_config.worker_index - 1)
             ) + env_config.vector_index
         else:
@@ -71,9 +86,13 @@ class RLlibEnvWrapper(MultiAgentEnv):
         self.sample_agent_idx = str(self.env.all_agents[0].idx)
 
         obs = self.env.reset()
+        _=obs.pop('p')
+        for k in obs.keys():
+            obs[k]=get_flatten_obs(recursive_list_to_np_array(obs[k]))
 
-        self.observation_space = self._dict_to_spaces_dict(obs["0"])
-        self.observation_space_pl = self._dict_to_spaces_dict(obs["p"])
+        self.observation_space = spaces.Box(low=-1e20,high=1e20,shape=obs["0"].shape,dtype=np.float64)
+        # self.observation_space = self._dict_to_spaces_dict(obs["0"])
+        # self.observation_space_pl = self._dict_to_spaces_dict(obs["p"])
 
         if self.env.world.agents[0].multi_action_mode:
             self.action_space = spaces.MultiDiscrete(
@@ -88,30 +107,49 @@ class RLlibEnvWrapper(MultiAgentEnv):
             )
             self.action_space.dtype = np.int64
 
-        if self.env.world.planner.multi_action_mode:
-            self.action_space_pl = spaces.MultiDiscrete(
-                self.env.get_agent("p").action_spaces
-            )
-            self.action_space_pl.dtype = np.int64
-            self.action_space_pl.nvec = self.action_space_pl.nvec.astype(
-                np.int64)
-
-        else:
-            self.action_space_pl = spaces.Discrete(
-                self.env.get_agent("p").action_spaces
-            )
-            self.action_space_pl.dtype = np.int64
+        # if self.env.world.planner.multi_action_mode:
+        #     self.action_space_pl = spaces.MultiDiscrete(
+        #         self.env.get_agent("p").action_spaces
+        #     )
+        #     self.action_space_pl.dtype = np.int64
+        #     self.action_space_pl.nvec = self.action_space_pl.nvec.astype(
+        #         np.int64)
+        #
+        # else:
+        #     self.action_space_pl = spaces.Discrete(
+        #         self.env.get_agent("p").action_spaces
+        #     )
+        #     self.action_space_pl.dtype = np.int64
 
         self._seed = None
-        if self.verbose:
-            print("[EnvWrapper] Spaces")
-            print("[EnvWrapper] Obs (a)   ")
-            pretty_print(self.observation_space)
-            print("[EnvWrapper] Obs (p)   ")
-            pretty_print(self.observation_space_pl)
-            print("[EnvWrapper] Action (a)", self.action_space)
-            print("[EnvWrapper] Action (p)", self.action_space_pl)
+        # if self.verbose:
+        #     print("[EnvWrapper] Spaces")
+        #     print("[EnvWrapper] Obs (a)   ")
+        #     pretty_print(self.observation_space)
+        #     print("[EnvWrapper] Obs (p)   ")
+        #     pretty_print(self.observation_space_pl)
+        #     print("[EnvWrapper] Action (a)", self.action_space)
+        #     print("[EnvWrapper] Action (p)", self.action_space_pl)
 
+    def get_env_info(self):
+        self.policy_mapping_dict = {
+            "all_scenario": {
+                "description": "policy mapping for agent and planner",
+                "team_prefix": ( 'a'),
+                "all_agents_one_policy": True,
+                "one_agent_one_policy": True,
+            },
+
+        }
+        env_info = {
+            "space_obs":  self.observation_space,  # self.observation_space,
+            # "space_obs": {'a': self.observation_space, },  # self.observation_space,
+            "space_act": { 'a': self.action_space, },  # self.action_space,
+            "num_agents": 10,#self.num_agents,
+            "episode_limit": 3000,
+            "policy_mapping_info": self.policy_mapping_dict
+        }
+        return env_info
     def _dict_to_spaces_dict(self, obs):
         dict_of_spaces = {}
         for k, v in obs.items():
@@ -206,10 +244,13 @@ class RLlibEnvWrapper(MultiAgentEnv):
         self._seed = seed2
 
     def reset(self, *args, **kwargs):
+        collectRemoveMemoryGarbage()
+
         obs = self.env.reset(*args, **kwargs)
         if 'p' in obs.keys(): _=obs.pop('p')
-        return recursive_list_to_np_array(obs)
-
+        for k in obs.keys():
+            obs[k] = get_flatten_obs(recursive_list_to_np_array(obs[k]))
+        return obs
     def step(self, action_dict):
 
         if 'p' in action_dict.keys(): _=action_dict.pop('p')
@@ -220,6 +261,7 @@ class RLlibEnvWrapper(MultiAgentEnv):
         if 'p' in done.keys(): _=done.pop('p')
         if 'p' in info.keys(): _=info.pop('p')
 
+        # '''
         info = {k: {'res': np.array([-1.0, -1.0, -1.0]), "training_enabled": True} for k in action_dict.keys()}
         if self.env._steps_in_period == 0:
             metrics = self.env.scenario_metrics()
@@ -240,5 +282,7 @@ class RLlibEnvWrapper(MultiAgentEnv):
 
         # assert isinstance(obs[self.sample_agent_idx]
         #                   ["action_mask"], np.ndarray)
-
-        return recursive_list_to_np_array(obs), rew, done, info
+        # '''
+        for k in obs.keys():
+            obs[k] = get_flatten_obs(recursive_list_to_np_array(obs[k]))
+        return obs,rew, done, info
