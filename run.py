@@ -18,7 +18,6 @@ args = parser.parse_args()
 
 
 stop_iter = args.stop_iter
-# iter_this_run = 10
 iter_this_run = 10
 
 
@@ -36,8 +35,12 @@ def get_load_path(start_iter=0):
         os.path.join(exp_path+'/iter_'+str(start_iter))
     )[0]
     ckpt_dir=os.path.join(exp_path,'iter_'+str(start_iter),load_ckpt)
-    ckpt_path=os.path.join(ckpt_dir,os.listdir(ckpt_dir)[2])
-    return ckpt_path,best_rew
+    ckpt_lst=[k for k in os.listdir(ckpt_dir) ]
+    for ckpt in ckpt_lst:
+        if  ckpt.startswith('check') and not ckpt.endswith('data'):
+
+            ckpt_path=os.path.join(ckpt_dir,ckpt)
+            return ckpt_path,best_rew
 
 for  num_iter in range(stop_iter//iter_this_run):
     if num_iter>0:
