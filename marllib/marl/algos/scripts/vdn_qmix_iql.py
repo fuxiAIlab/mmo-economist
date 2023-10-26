@@ -159,7 +159,7 @@ def run_joint_q(model: Any, exp: Dict, run: Dict, env: Dict,
         if policy_rew > restore['best_rew']:
             trainer.save(os.path.join(restore['save_path'], 'rew_' + str(round(policy_rew, 4))))
         if i + 1 % restore['iter_this_run'] == 0:
-            trainer.save(os.path.join(restore['save_path'], 'iter_' + str(i + 1)))
+            trainer.save(os.path.join(restore['save_path'], 'iter_' + str(restore['num_iter']+i + 1)))
 
         if 'profit_mean' in result['custom_metrics'].keys():
             profit = round(result['custom_metrics']['profit_mean'], 4)
