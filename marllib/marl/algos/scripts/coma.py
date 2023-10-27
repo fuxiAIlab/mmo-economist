@@ -91,7 +91,7 @@ def run_coma(model: Any, exp: Dict, run: Dict, env: Dict,
         "lambda": 0.98,#gae_lambda,
         "vf_loss_coeff": 0.05,#vf_loss_coeff,
         "entropy_coeff": 0.0025,#entropy_coeff,
-        "lr": 0.0003,#lr if restore is None else 1e-10,
+        "lr": 0.0001,#lr if restore is None else 1e-10,
         "model": {
             "custom_model": "Centralized_Critic_Model",
             "max_seq_len": episode_limit,
