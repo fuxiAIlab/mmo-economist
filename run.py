@@ -18,7 +18,7 @@ args = parser.parse_args()
 
 
 stop_iter = args.stop_iter
-iter_this_run = 10
+iter_this_run = 2
 
 
 exp_path = f'./{args.algo}_seed_{args.seed}'

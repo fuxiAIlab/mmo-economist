@@ -33,7 +33,7 @@ import json
 from typing import Any, Dict
 from ray.tune.analysis import ExperimentAnalysis
 
-
+import numpy as np
 def run_joint_q(model: Any, exp: Dict, run: Dict, env: Dict,
                 stop: Dict, restore: Dict) -> ExperimentAnalysis:
     """ This script runs the IQL, VDN, and QMIX algorithm using Ray RLlib.
@@ -158,7 +158,7 @@ def run_joint_q(model: Any, exp: Dict, run: Dict, env: Dict,
 
         if policy_rew > restore['best_rew']:
             trainer.save(os.path.join(restore['save_path'], 'rew_' + str(round(policy_rew, 4))))
-        if i + 1 % restore['iter_this_run'] == 0:
+        if (i + 1) % restore['iter_this_run'] == 0:
             trainer.save(os.path.join(restore['save_path'], 'iter_' + str(restore['num_iter']+i + 1)))
 
         if 'profit_mean' in result['custom_metrics'].keys():
