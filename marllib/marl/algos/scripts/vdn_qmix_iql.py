@@ -86,16 +86,19 @@ def run_joint_q(model: Any, exp: Dict, run: Dict, env: Dict,
 
     JointQ_Config.update(
         {
-            "rollout_fragment_length": 1,
+            "rollout_fragment_length": 20,
+            # "batch_mode": "truncate_episodes",
+            # "train_batch_size": 512,#train_batch_episode,  # in sequence
+            "batch_mode": "complete_episodes",
+            "train_batch_size": 4,
             "buffer_size": 100000,#buffer_size * episode_limit,  # in timesteps
-            "train_batch_size": 6,#train_batch_episode,  # in sequence
-            "target_network_update_freq": 100000,#episode_limit * target_network_update_frequency,  # in timesteps
-            "learning_starts": 18000,#episode_limit * train_batch_episode,
+            "target_network_update_freq": 192000,#episode_limit * target_network_update_frequency,  # in timesteps
+            "learning_starts": 0, #2000,#episode_limit * train_batch_episode,
             "lr": 0.0002, #lr if restore is None else 1e-10,
             "exploration_config": {
                 "type": "EpsilonGreedy",
-                "initial_epsilon": 1.0,
-                "final_epsilon": final_epsilon,
+                "initial_epsilon": 0.05,#1.0,
+                "final_epsilon": 0.05,#final_epsilon,
                 "epsilon_timesteps": epsilon_timesteps,
             },
             "mixer": mixer_dict[algorithm]
@@ -142,7 +145,6 @@ def run_joint_q(model: Any, exp: Dict, run: Dict, env: Dict,
     trainer = JQTrainer( config=trainer_config)
     if model_path != '':
         trainer.restore(model_path)
-
     # restore.model_path-> save_path,load_path, train_iter, log_path
     dense_log = []
     pst_time = time.time()
@@ -154,6 +156,8 @@ def run_joint_q(model: Any, exp: Dict, run: Dict, env: Dict,
 
         print(result['custom_metrics'])
         print('pol,epi rew:', result['policy_reward_mean'], result['episode_reward_mean'])
+        print(result['info'])
+        print('*' * 40)
         policy_rew = result['episode_reward_mean'] / 10  # num_agents
 
         if policy_rew > restore['best_rew']:

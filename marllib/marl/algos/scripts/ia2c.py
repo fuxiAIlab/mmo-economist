@@ -31,7 +31,7 @@ from marllib.marl.algos.scripts.coma import restore_model
 import json
 from typing import Any, Dict
 from ray.tune.analysis import ExperimentAnalysis
-
+import numpy as np
 
 def run_ia2c(model: Any, exp: Dict, run: Dict, env: Dict,
              stop: Dict, restore: Dict) -> ExperimentAnalysis:
@@ -69,38 +69,111 @@ def run_ia2c(model: Any, exp: Dict, run: Dict, env: Dict,
     back_up_config = merge_dicts(exp, env)
     back_up_config.pop("algo_args")  # clean for grid_search
 
+    # config = {
+    #     "train_batch_size": train_batch_size,
+    #     "batch_mode": batch_mode,
+    #     "use_gae": use_gae,
+    #     "lambda": gae_lambda,
+    #     "vf_loss_coeff": vf_loss_coeff,
+    #     "entropy_coeff": entropy_coeff,
+    #     "lr": lr if restore is None else 1e-10,
+    #     "model": {
+    #         "custom_model": "Base_Model",
+    #         "max_seq_len": episode_limit,
+    #         "custom_model_config": back_up_config,
+    #     },
+    # }
+
+
+
     config = {
-        "train_batch_size": train_batch_size,
-        "batch_mode": batch_mode,
-        "use_gae": use_gae,
-        "lambda": gae_lambda,
-        "vf_loss_coeff": vf_loss_coeff,
-        "entropy_coeff": entropy_coeff,
-        "lr": lr if restore is None else 1e-10,
+        'rollout_fragment_length': 500,
+        "batch_mode": 'truncate_episodes',  # batch_mode,
+        "train_batch_size": 8000,  # train_batch_size,
+        # "sgd_minibatch_size": 4000,  # sgd_minibatch_size,
+        "lr": 0.0003,  # lr if restore is None else 1e-10,
+        "entropy_coeff": 0.0025,  # entropy_coeff,
+        # "num_sgd_iter": 3,  # num_sgd_iter,
+        # "clip_param": 0.2,  # clip_param,
+        "use_gae": True,  # use_gae,
+        "lambda": 0.98,  # gae_lambda,
+        "vf_loss_coeff": 0.05,  # vf_loss_coeff,
+        # "kl_coeff": 0.0,  # kl_coeff,
+        # "vf_clip_param": 50.0,  # vf_clip_param,
         "model": {
-            "custom_model": "Base_Model",
+             "custom_model": "Base_Model",
             "max_seq_len": episode_limit,
             "custom_model_config": back_up_config,
         },
     }
-
     config.update(run)
 
     algorithm = exp["algorithm"]
-    map_name = exp["env_args"]["map_name"]
+    map_name = ''  # exp["env_args"]["map_name"]
     arch = exp["model_arch_args"]["core_arch"]
     RUNNING_NAME = '_'.join([algorithm, arch, map_name])
-    model_path = restore_model(restore, exp)
+    # model_path = restore_model(restore, exp)
+    model_path = restore['load_path']
+    import sys, os, time
+    def fa_path(path, num):
+        if num == 0:
+            return path
+        return fa_path(os.path.dirname(os.path.abspath(path)), num - 1)
 
-    results = tune.run(IA2CTrainer,
-                       name=RUNNING_NAME,
-                       checkpoint_at_end=exp['checkpoint_end'],
-                       checkpoint_freq=exp['checkpoint_freq'],
-                       restore=model_path,
-                       stop=stop,
-                       config=config,
-                       verbose=1,
-                       progress_reporter=CLIReporter(),
-                       local_dir=available_local_dir if exp["local_dir"] == "" else exp["local_dir"])
+    # sys.path.append(os.path.dirname(os.path.abspath('./')))
+    run_path = fa_path(os.path.abspath(__file__), 6)
+    sys.path.append(run_path)
 
-    return results
+    from foundation.utils.rllib_env_wrapper import RLlibEnvWrapper
+    from callbacks import TrainerCallbacks
+    trainer_config = config
+    _ = trainer_config.pop("env")
+    _ = trainer_config.pop("evaluation_interval")
+    trainer_config['multiagent']['policies'] = {
+        'shared_policy': (
+            None,
+            config['model']['custom_model_config']['space_obs'],
+            config['model']['custom_model_config']['space_act']['a'],
+            config['model']
+        )
+    }
+    trainer_config['env_config'] = config['model']['custom_model_config']['env_args']
+    trainer_config['callbacks'] = TrainerCallbacks
+    trainer_config['seed'] = restore['seed']
+
+    trainer = IA2CTrainer(env=RLlibEnvWrapper, config=trainer_config)
+    if model_path != '':
+        trainer.restore(model_path)
+
+    # restore.model_path-> save_path,load_path, train_iter, log_path
+    dense_log = []
+    pst_time = time.time()
+    for i in range(restore['iter_this_run']):
+        result = trainer.train()
+        cur_time = time.time()
+        print('time:', cur_time - pst_time, 'timestep: ', result['timesteps_total'])
+        pst_time = cur_time
+
+        print(result['custom_metrics'])
+        print('pol,epi rew:', result['policy_reward_mean'], result['episode_reward_mean'])
+        policy_rew = result['episode_reward_mean'] / 10  # num_agents
+
+        if policy_rew > restore['best_rew']:
+            trainer.save(os.path.join(restore['save_path'], 'rew_' + str(round(policy_rew, 4))))
+        if (i + 1) % restore['iter_this_run'] == 0:
+            trainer.save(os.path.join(restore['save_path'], 'iter_' + str(restore['num_iter'] + i + 1)))
+
+        if 'profit_mean' in result['custom_metrics'].keys():
+            profit = round(result['custom_metrics']['profit_mean'], 4)
+            equality = round(result['custom_metrics']['equality_mean'], 4)
+            capability = round(result['custom_metrics']['capability_mean'], 4)
+            dense_log.append({
+                'iter': i, 'epi_rew': result['episode_reward_mean'], 'a_rew': policy_rew,
+                'profit': profit, 'equality': equality, 'capability': capability,
+                'timesteps': result['timesteps_total']
+            })
+
+    np.save(os.path.join(restore['save_path'],
+                         f"dense_log_{restore['num_iter']}_{restore['num_iter'] + restore['iter_this_run']}.npy"),
+            dense_log)
+    return

@@ -41,8 +41,8 @@ def run_il(exp_info, env, model, stop=None):
     ########################
 
     env_info = env.get_env_info()
-    map_name = exp_info['env_args']['map_name']
-    agent_name_ls = env.agents
+    map_name = '' #exp_info['env_args']['map_name']
+    agent_name_ls = [str(i) for i in range(10)]  # env.agents
     env_info["agent_name_ls"] = agent_name_ls
     env.close()
 
@@ -123,7 +123,7 @@ def run_il(exp_info, env, model, stop=None):
 
     run_config = {
         "seed": int(exp_info["seed"]),
-        "env": exp_info["env"] + "_" + exp_info["env_args"]["map_name"],
+        "env": exp_info["env"] + "_" ,#+ exp_info["env_args"]["map_name"],
         "num_gpus_per_worker": exp_info["num_gpus_per_worker"],
         "num_gpus": exp_info["num_gpus"],
         "num_workers": exp_info["num_workers"],
@@ -145,7 +145,7 @@ def run_il(exp_info, env, model, stop=None):
     stop_config = dict_update(stop_config, stop)
 
     exp_info, run_config, stop_config, restore_config = restore_config_update(exp_info, run_config, stop_config)
-
+    restore_config = exp_info["restore_path"]  #
     ##################
     ### run script ###
     ##################

@@ -15,7 +15,8 @@ args = parser.parse_args()
 #     python run.py --algo mappo --seed seed --stop-iter 300
 #     python run.py --algo coma --seed seed --stop-iter 300
 #     python run.py --algo iql --seed seed --stop-iter 200
-
+#     python run.py --algo ippo --seed seed --stop-iter 300
+#     python run.py --algo ia2c --seed seed --stop-iter 300
 
 stop_iter = args.stop_iter
 iter_this_run = 10 
@@ -42,7 +43,7 @@ def get_load_path(start_iter=0):
             ckpt_path=os.path.join(ckpt_dir,ckpt)
             return ckpt_path,best_rew
 
-for  num_iter in range(stop_iter//iter_this_run):
+for  num_iter in range( stop_iter//iter_this_run):
     if num_iter>0:
         load_path,best_rew=get_load_path(num_iter*iter_this_run)
         load_path = '--load-path ' + load_path

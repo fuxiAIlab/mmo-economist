@@ -91,7 +91,10 @@ elif args.algo == "iql":
     algo = marl.algos.iql(hyperparam_source="test")
 elif args.algo == "mappo":
     algo = marl.algos.mappo(hyperparam_source="test")
-
+elif args.algo == "ippo":
+    algo = marl.algos.ippo(hyperparam_source="test")
+elif args.algo == "ia2c":
+    algo = marl.algos.ia2c(hyperparam_source="test")
 #model = marl.build_model(env, mappo, {"core_arch": "lstm", "encode_layer": "128-128"})
 model = marl.build_model(env, algo, {"core_arch": "mlp",
                                      'custom_model_config':run_configuration['agent_policy']['model']['custom_model_config']})
