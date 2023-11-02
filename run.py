@@ -19,7 +19,7 @@ args = parser.parse_args()
 #     python run.py --algo ia2c --seed seed --stop-iter 300
 
 stop_iter = args.stop_iter
-iter_this_run = 10 
+iter_this_run = 50 
 
 
 exp_path = f'./{args.algo}_seed_{args.seed}'
