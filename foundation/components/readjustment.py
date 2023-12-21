@@ -42,10 +42,11 @@ class LaunchReadjustment(BaseComponent):
         self.adjustment_cycle_pos = 1
 
         self._adjustment_rates = [
-                adjustment_rate_min + adjustment_rate_bin * x for x in range(
-                    int((adjustment_rate_max - adjustment_rate_min) /
-                        adjustment_rate_bin) + 1)
-            ]
+            round(adjustment_rate_min + adjustment_rate_bin * x, 2)
+            for x in range(
+                int((adjustment_rate_max * 10 - adjustment_rate_min * 10) /
+                    (adjustment_rate_bin * 10)) + 1)
+        ]
 
         if is_biadjustment:
             self._adjustment_rates = self._adjustment_rates + \
@@ -65,7 +66,11 @@ class LaunchReadjustment(BaseComponent):
     @property
     def launch_adjustment(self):
         return self._curr_launch_adjustment
-    
+
+    @property
+    def base_launch_adjustment(self):
+        return self._base_launch_adjustment
+
     def start_new_launch_adjustment(self):
         self.adjustment_cycle_pos = 1
 
@@ -101,7 +106,7 @@ class LaunchReadjustment(BaseComponent):
 
     def generate_observations(self):
         # is_adjustment_day = float(
-            # self.adjustment_cycle_pos >= self.adjustment_period)
+        # self.adjustment_cycle_pos >= self.adjustment_period)
         is_first_day = float(self.adjustment_cycle_pos == 1)
         adjustment_phase = self.adjustment_cycle_pos / self.adjustment_period
 
@@ -109,8 +114,8 @@ class LaunchReadjustment(BaseComponent):
 
         obs[self.world.planner.idx] = dict(
             # is_adjustment_day=is_adjustment_day,
-                                           is_first_day=is_first_day,
-                                           adjustment_phase=adjustment_phase)
+            is_first_day=is_first_day,
+            adjustment_phase=adjustment_phase)
 
         obs[self.world.planner.idx].update({
             'last_adjustment_' + str(resource):
@@ -128,8 +133,8 @@ class LaunchReadjustment(BaseComponent):
 
             obs[str(agent.idx)] = dict(
                 # is_adjustment_day=is_adjustment_day,
-                                       is_first_day=is_first_day,
-                                       adjustment_phase=adjustment_phase)
+                is_first_day=is_first_day,
+                adjustment_phase=adjustment_phase)
 
             # TODO: planner能观察到player的信息？
             # obs["p" + str(agent.idx)] = dict(
@@ -158,6 +163,10 @@ class LaunchReadjustment(BaseComponent):
             masks[self.world.planner.idx] = self._planner_masks["adjustment"]
 
         return masks
+
+    def additional_reset_steps(self):
+        self.adjustment_cycle_pos = 1
+        self.adjustments = []
 
     def get_dense_log(self):
         return self.adjustments
