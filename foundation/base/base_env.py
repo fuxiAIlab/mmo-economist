@@ -1015,7 +1015,8 @@ class BaseEnvironment(ABC):
             flatten_masks=self._flatten_masks,
         )
         rew = self._generate_rewards()
-        done = {"__all__": self.world.timestep >= self._episode_length}
+        done = {"__all__": self.check_if_done()}
+        # done = {"__all__": self.world.timestep >= self._episode_length}
         info = {k: {} for k in obs.keys()}
 
         if self._dense_log_this_episode:
@@ -1035,8 +1036,18 @@ class BaseEnvironment(ABC):
             rew = self.collate_agent_rew(rew)
             info = self.collate_agent_info(info)
 
+        obs = {k: v for k, v in obs.items() if k !='p'}
+        rew = {k: v for k, v in rew.items() if k !='p'}
+        info = {k: v for k, v in info.items() if k !='p'}
+
         return obs, rew, done, info
 
+    def check_if_done(self):
+        if self.world.timestep >= self._episode_length:
+            return True
+        else:
+            return False
+    
     # The following methods must be implemented for each scenario
     # -----------------------------------------------------------
 
