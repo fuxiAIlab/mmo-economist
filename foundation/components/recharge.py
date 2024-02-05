@@ -1,36 +1,26 @@
-# Copyright (c) 2020, salesforce.com, inc.
-# All rights reserved.
+# SPDX-FileCopyrightText: 2024 by NetEase, Inc., All Rights Reserved.
 # SPDX-License-Identifier: BSD-3-Clause
-# For full license text, see the LICENSE file in the repo root
-# or https://opensource.org/licenses/BSD-3-Clause
 
 import numpy as np
+
 from foundation.base.base_component import BaseComponent, component_registry
 
 
 @component_registry.add
 class Recharge(BaseComponent):
     """
-    Allows mobile agents to build house landmarks in the world using stone and wood,
-    earning income.
-
-    Can be configured to include heterogeneous building skill where agents earn
-    different levels of income when building.
+    Recharge refers to any forex behavior where players make payments in the MMOs,
+    such as In-App Purchase (IAP).
 
     Args:
-        payment (int): Default amount of coin agents earn from building.
+        recharge_income (int): Default amount of token players earn from recharging.
             Must be >= 0. Default is 10.
-        payment_max_skill_multiplier (int): Maximum skill multiplier that an agent
-            can sample. Must be >= 1. Default is 1.
-        skill_dist (str): Distribution type for sampling skills. Default ("none")
-            gives all agents identical skill equal to a multiplier of 1. "pareto" and
-            "lognormal" sample skills from the associated distributions.
-        recharge_labor (float): Labor cost associated with building a house.
-            Must be >= 0. Default is 10.
+        recharge_labor (float): Labor cost associated with recharging.
+            Must be >= 0. Default is 1.
     """
 
     name = "Recharge"
-    component_type = None
+    component_type = "Forex"
     required_entities = ["Exp", "Mat", "Token", "Labor", "Capability"]
     agent_subclasses = ["BasicPlayer"]
 
@@ -39,10 +29,11 @@ class Recharge(BaseComponent):
         *base_component_args,
         recharge_income=10.0,
         recharge_labor=1.0,
-        **base_component_kwargs
+        **base_component_kwargs,
     ):
         super().__init__(*base_component_args, **base_component_kwargs)
 
+        # The resources required to recharge, which can also represent the exchange rate for recharging.
         self.resource_cost = {"Currency": 1}
 
         self.recharge_income = int(recharge_income)
@@ -54,13 +45,13 @@ class Recharge(BaseComponent):
         self.recharges = []
 
     def agent_can_recharge(self, agent):
-        """Return True if agent can actually recharge in its current location."""
-        # See if the agent has the resources necessary to complete the action
+        """Return True if player can actually recharge in its current location."""
+        # See if the player has the resources necessary to complete the action
         for resource, cost in self.resource_cost.items():
             if agent.state["inventory"][resource] < cost:
                 return False
 
-        # If we made it here, the agent can recharge.
+        # If we made it here, the player can recharge.
         return True
 
     # Required methods for implementing components
@@ -70,9 +61,9 @@ class Recharge(BaseComponent):
         """
         See base_component.py for detailed description.
 
-        Add a single action (build) for mobile agents.
+        Add a single action (recharge) for players.
         """
-        # This component adds 1 action that mobile agents can take: build a house
+        # This component adds 1 action that player can take
         if agent_cls_name == "BasicPlayer":
             return 1
 
@@ -82,7 +73,7 @@ class Recharge(BaseComponent):
         """
         See base_component.py for detailed description.
 
-        For mobile agents, add state fields for building skill.
+        For players, add state fields for recharging.
         """
         if agent_cls_name not in self.agent_subclasses:
             return {}
@@ -94,16 +85,15 @@ class Recharge(BaseComponent):
         """
         See base_component.py for detailed description.
 
-        Convert stone+wood to house+coin for agents that choose to build and can.
+        Convert CNY to TOK for players that choose to recharge and can.
         """
         world = self.world
         recharge = []
-        # Apply any building actions taken by the mobile agents
+        # Apply any recharge actions taken by the players.
         for agent in world.get_random_order_agents():
-
             action = agent.get_component_action(self.name)
 
-            # This component doesn't apply to this agent!
+            # This component doesn't apply to this player!
             if action is None:
                 continue
 
@@ -111,21 +101,17 @@ class Recharge(BaseComponent):
             if action == 0:
                 pass
 
-            # Build! (If you can.)
+            # Recharge! (If you can.)
             elif action == 1:
                 if self.agent_can_recharge(agent):
                     # Remove the resources
                     for resource, cost in self.resource_cost.items():
                         agent.state["inventory"][resource] -= cost
 
-                    # Place a house where the agent is standing
-                    # loc_r, loc_c = agent.loc
-                    # world.create_landmark("House", loc_r, loc_c, agent.idx)
-
-                    # Receive payment for the house
+                    # Receive payment for recharging
                     agent.state["inventory"]["Token"] += agent.state["recharge_income"]
 
-                    # Incur the labor cost for building
+                    # Incur the labor cost for recharging
                     agent.state["endogenous"]["Labor"] += self.recharge_labor
 
                     recharge.append(
@@ -144,15 +130,12 @@ class Recharge(BaseComponent):
     def generate_observations(self):
         """
         See base_component.py for detailed description.
-
-        Here, agents observe their build skill. The planner does not observe anything
-        from this component.
         """
 
         obs_dict = dict()
         for agent in self.world.agents:
             obs_dict[agent.idx] = {
-                "recharge_income": agent.state["recharge_income"] * self.inv_scale 
+                "recharge_income": agent.state["recharge_income"] * self.inv_scale
             }
 
         return obs_dict
@@ -160,12 +143,10 @@ class Recharge(BaseComponent):
     def generate_masks(self, completions=0):
         """
         See base_component.py for detailed description.
-
-        Prevent building only if a landmark already occupies the agent's location.
         """
 
         masks = {}
-        # Mobile agents' build action is masked if they cannot build with their
+        # Player' recharge action is masked if they cannot recharge with their
         # current location and/or endowment
         for agent in self.world.agents:
             masks[agent.idx] = np.array([self.agent_can_recharge(agent)])
@@ -201,8 +182,6 @@ class Recharge(BaseComponent):
     def additional_reset_steps(self):
         """
         See base_component.py for detailed description.
-
-        Re-sample agents' building skills.
         """
         for agent in self.world.agents:
             agent.state["recharge_income"] = float(self.recharge_income)
@@ -211,11 +190,11 @@ class Recharge(BaseComponent):
 
     def get_dense_log(self):
         """
-        Log builds.
+        Log recharges.
 
         Returns:
-            builds (list): A list of build events. Each entry corresponds to a single
-                timestep and contains a description of any builds that occurred on
+            recharges (list): A list of recharge events. Each entry corresponds to a single
+                timestep and contains a description of any recharges that occurred on
                 that timestep.
 
         """

@@ -1,3 +1,7 @@
+# This file was modified by NetEase, Inc. in 2024-02-04
+# SPDX-FileCopyrightText: 2024 by NetEase, Inc., All Rights Reserved.
+# SPDX-License-Identifier: BSD-3-Clause
+
 # Copyright (c) 2020, salesforce.com, inc.
 # All rights reserved.
 # SPDX-License-Identifier: BSD-3-Clause
@@ -274,7 +278,7 @@ class Maps:
             r,
             c,
             value + self.get_point(entity_name, r, c, **kwargs),
-            **kwargs
+            **kwargs,
         )
 
     def is_accessible(self, r, c, agent_id):

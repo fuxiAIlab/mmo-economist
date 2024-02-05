@@ -1,41 +1,31 @@
-# Copyright (c) 2020, salesforce.com, inc.
-# All rights reserved.
+# SPDX-FileCopyrightText: 2024 by NetEase, Inc., All Rights Reserved.
 # SPDX-License-Identifier: BSD-3-Clause
-# For full license text, see the LICENSE file in the repo root
-# or https://opensource.org/licenses/BSD-3-Clause
 
 import numpy as np
 from numpy.random import rand
 
-from foundation.base.base_component import (
-    BaseComponent,
-    component_registry,
-)
+from foundation.base.base_component import BaseComponent, component_registry
 
 
 @component_registry.add
 class Task(BaseComponent):
     """
-    Allows mobile agents to move around the world and collect resources and prevents
-    agents from moving to invalid locations.
-
-    Can be configured to include collection skill, where agents have heterogeneous
-    probabilities of collecting bonus resources without additional labor cost.
+    Task refers to any production behavior in which players directly obtain game resources
+    through their labor in the MMOs. Task includes two main actions: moving to invalid
+    locations and then collecting the corresponding resources.
 
     Args:
         move_labor (float): Labor cost associated with movement. Must be >= 0.
             Default is 1.0.
-        collect_labor (float): Labor cost associated with collecting resources. This
-            cost is added (in addition to any movement cost) when the agent lands on
-            a tile that is populated with resources (triggering collection).
+        collect_labor (float): Labor cost associated with collecting resources.
             Must be >= 0. Default is 1.0.
         skill_dist (str): Distribution type for sampling skills. Default ("none")
-            gives all agents identical skill equal to a bonus prob of 0. "pareto" and
+            gives all players identical skill equal to a bonus prob of 0. "pareto" and
             "lognormal" sample skills from the associated distributions.
     """
 
     name = "Task"
-    component_type = None
+    component_type = "Production"
     required_entities = ["Token", "Exp", "Mat", "Labor"]
     agent_subclasses = ["BasicPlayer"]
 
@@ -45,7 +35,7 @@ class Task(BaseComponent):
         move_labor=1.0,
         collect_labor=1.0,
         skill_dist="none",
-        **base_component_kwargs
+        **base_component_kwargs,
     ):
         super().__init__(*base_component_args, **base_component_kwargs)
 
@@ -71,9 +61,9 @@ class Task(BaseComponent):
         """
         See base_component.py for detailed description.
 
-        Adds 4 actions (move up, down, left, or right) for mobile agents.
+        Adds 4 actions (move up, down, left, or right) for players.
         """
-        # This component adds 4 action that agents can take:
+        # This component adds 4 action that players can take:
         # move up, down, left, or right
         if agent_cls_name == "BasicPlayer":
             return 4
@@ -83,7 +73,7 @@ class Task(BaseComponent):
         """
         See base_component.py for detailed description.
 
-        For mobile agents, add state field for collection skill.
+        For players, add state field for collection skill.
         """
         if agent_cls_name not in self.agent_subclasses:
             return {}
@@ -96,14 +86,13 @@ class Task(BaseComponent):
         See base_component.py for detailed description.
 
         Move to adjacent, unoccupied locations. Collect resources when moving to
-        populated resource tiles, adding the resource to the agent's inventory and
+        populated resource tiles, adding the resource to the player's inventory and
         de-populating it from the tile.
         """
         world = self.world
 
         tasks = []
         for agent in world.get_random_order_agents():
-
             if self.name not in agent.action:
                 return
             action = agent.get_component_action(self.name)
@@ -123,11 +112,11 @@ class Task(BaseComponent):
                 else:  # action == 4, # Down
                     new_r, new_c = r + 1, c
 
-                # Attempt to move the agent (if the new coordinates aren't accessible,
+                # Attempt to move the player (if the new coordinates aren't accessible,
                 # nothing will happen)
                 new_r, new_c = world.set_agent_loc(agent, new_r, new_c)
 
-                # If the agent did move, incur the labor cost of moving
+                # If the player did move, incur the labor cost of moving
                 if (new_r != r) or (new_c != c):
                     agent.state["endogenous"]["Labor"] += self.move_labor
 
@@ -136,13 +125,14 @@ class Task(BaseComponent):
 
             for resource, health in world.location_resources(new_r, new_c).items():
                 if health >= 1:
-                    n_gathered = 1 + \
-                        (rand() < agent.state["bonus_gather_prob"])
+                    n_gathered = 1 + (rand() < agent.state["bonus_gather_prob"])
                     agent.state["inventory"][resource] += n_gathered
                     world.consume_resource(resource, new_r, new_c)
+
                     # Incur the labor cost of collecting a resource
                     agent.state["endogenous"]["Labor"] += self.collect_labor
-                    # Log the gather
+
+                    # Log the task
                     tasks.append(
                         dict(
                             agent=agent.idx,
@@ -158,7 +148,7 @@ class Task(BaseComponent):
         """
         See base_component.py for detailed description.
 
-        Here, agents observe their collection skill. The planner does not observe
+        Here, players observe their collection skill. The planner does not observe
         anything from this component.
         """
         return {
@@ -185,8 +175,7 @@ class Task(BaseComponent):
             np.float32
         )
 
-        masks = {agent.idx: mask_array[i]
-                 for i, agent in enumerate(world.agents)}
+        masks = {agent.idx: mask_array[i] for i, agent in enumerate(world.agents)}
 
         return masks
 
@@ -197,7 +186,7 @@ class Task(BaseComponent):
         """
         See base_component.py for detailed description.
 
-        Re-sample agents' collection skills.
+        Re-sample players' collection skills.
         """
         for agent in self.world.agents:
             if self.skill_dist == "none":
@@ -205,8 +194,7 @@ class Task(BaseComponent):
             elif self.skill_dist == "pareto":
                 bonus_rate = np.minimum(2, np.random.pareto(3)) / 2
             elif self.skill_dist == "lognormal":
-                bonus_rate = np.minimum(
-                    2, np.random.lognormal(-2.022, 0.938)) / 2
+                bonus_rate = np.minimum(2, np.random.lognormal(-2.022, 0.938)) / 2
             else:
                 raise NotImplementedError
             agent.state["bonus_gather_prob"] = float(bonus_rate)
@@ -215,12 +203,11 @@ class Task(BaseComponent):
 
     def get_dense_log(self):
         """
-        Log resource collections.
+        Log tasks.
 
         Returns:
-            tasks (list): A list of gather events. Each entry corresponds to a single
-                timestep and contains a description of any resource tasks that
-                occurred on that timestep.
-
+            tasks (list): A list of task events. Each entry corresponds to a single
+                timestep and contains a description of any task that occurred on
+                that timestep.
         """
         return self.tasks

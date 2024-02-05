@@ -1,36 +1,31 @@
-# Copyright (c) 2020, salesforce.com, inc.
-# All rights reserved.
+# SPDX-FileCopyrightText: 2024 by NetEase, Inc., All Rights Reserved.
 # SPDX-License-Identifier: BSD-3-Clause
-# For full license text, see the LICENSE file in the repo root
-# or https://opensource.org/licenses/BSD-3-Clause
 
 import numpy as np
+
 from foundation.base.base_component import BaseComponent, component_registry
 
 
 @component_registry.add
 class Upgrade(BaseComponent):
     """
-    Allows mobile agents to build house landmarks in the world using stone and wood,
-    earning income.
-
-    Can be configured to include heterogeneous building skill where agents earn
-    different levels of income when building.
+    Upgrade refers to any consuming behavior of players to improve their capabilities
+    by consuming corresponding economic resources in the MMOs.
 
     Args:
-        payment (int): Default amount of coin agents earn from building.
-            Must be >= 0. Default is 10.
-        payment_max_skill_multiplier (int): Maximum skill multiplier that an agent
+        payment_max_skill_multiplier (int): Maximum skill multiplier that a player
             can sample. Must be >= 1. Default is 1.
-        skill_dist (str): Distribution type for sampling skills. Default ("none")
-            gives all agents identical skill equal to a multiplier of 1. "pareto" and
-            "lognormal" sample skills from the associated distributions.
-        upgrade_labor (float): Labor cost associated with building a house.
+        upgrade_income (int): Default amount of capability players earn from upgrading.
             Must be >= 0. Default is 10.
+        upgrade_labor (float): Labor cost associated with upgrading.
+            Must be >= 0. Default is 1.
+        skill_dist (str): Distribution type for sampling skills. Default ("none")
+            gives all players identical skill equal to a multiplier of 1. "pareto" and
+            "lognormal" sample skills from the associated distributions.
     """
 
     name = "Upgrade"
-    component_type = None
+    component_type = "Consumption"
     required_entities = ["Exp", "Mat", "Token", "Labor", "Capability"]
     agent_subclasses = ["BasicPlayer"]
 
@@ -41,13 +36,14 @@ class Upgrade(BaseComponent):
         skill_dist="none",
         upgrade_income=10.0,
         upgrade_labor=1.0,
-        **base_component_kwargs
+        **base_component_kwargs,
     ):
         super().__init__(*base_component_args, **base_component_kwargs)
 
         self.payment_max_skill_multiplier = int(payment_max_skill_multiplier)
         assert self.payment_max_skill_multiplier >= 1
 
+        # The resources required to upgrade
         self.resource_cost = {"Exp": 1, "Mat": 1, "Token": 1}
 
         self.upgrade_income = int(upgrade_income)
@@ -64,18 +60,13 @@ class Upgrade(BaseComponent):
         self.upgrades = []
 
     def agent_can_upgrade(self, agent):
-        """Return True if agent can actually build in its current location."""
-        # See if the agent has the resources necessary to complete the action
+        """Return True if player can actually upgrade in its current location."""
+        # See if the player has the resources necessary to complete the action
         for resource, cost in self.resource_cost.items():
             if agent.state["inventory"][resource] < cost:
                 return False
 
-        # Do nothing if this spot is already occupied by a landmark or resource
-        # if self.world.location_resources(*agent.loc):
-        #     return False
-        # if self.world.location_landmarks(*agent.loc):
-        #     return False
-        # If we made it here, the agent can build.
+        # If we made it here, the player can upgrade.
         return True
 
     # Required methods for implementing components
@@ -85,9 +76,9 @@ class Upgrade(BaseComponent):
         """
         See base_component.py for detailed description.
 
-        Add a single action (build) for mobile agents.
+        Add a single action (upgrade) for players.
         """
-        # This component adds 1 action that mobile agents can take: build a house
+        # This component adds 1 action that players can take
         if agent_cls_name == "BasicPlayer":
             return 1
 
@@ -97,28 +88,30 @@ class Upgrade(BaseComponent):
         """
         See base_component.py for detailed description.
 
-        For mobile agents, add state fields for building skill.
+        For players, add state fields for upgrading.
         """
         if agent_cls_name not in self.agent_subclasses:
             return {}
         if agent_cls_name == "BasicPlayer":
-            return {"upgrade_income": float(self.upgrade_income), "upgrade_skill": float(1)}
+            return {
+                "upgrade_income": float(self.upgrade_income),
+                "upgrade_skill": float(1),
+            }
         raise NotImplementedError
 
     def component_step(self):
         """
         See base_component.py for detailed description.
 
-        Convert stone+wood to house+coin for agents that choose to build and can.
+        Convert resources to capabilities for players that choose to upgrade and can.
         """
         world = self.world
-        build = []
-        # Apply any building actions taken by the mobile agents
+        upgrad = []
+        # Apply any upgrad actions taken by the players
         for agent in world.get_random_order_agents():
-
             action = agent.get_component_action(self.name)
 
-            # This component doesn't apply to this agent!
+            # This component doesn't apply to this player!
             if action is None:
                 continue
 
@@ -126,24 +119,22 @@ class Upgrade(BaseComponent):
             if action == 0:
                 pass
 
-            # Build! (If you can.)
+            # Upgrade! (If you can.)
             elif action == 1:
                 if self.agent_can_upgrade(agent):
                     # Remove the resources
                     for resource, cost in self.resource_cost.items():
                         agent.state["inventory"][resource] -= cost
 
-                    # Place a house where the agent is standing
-                    # loc_r, loc_c = agent.loc
-                    # world.create_landmark("House", loc_r, loc_c, agent.idx)
+                    # Receive capabilities for upgrading
+                    agent.state["endogenous"]["Capability"] += agent.state[
+                        "upgrade_income"
+                    ]
 
-                    # Receive payment for the house
-                    agent.state["endogenous"]["Capability"] += agent.state["upgrade_income"]
-
-                    # Incur the labor cost for building
+                    # Incur the labor cost for upgrading
                     agent.state["endogenous"]["Labor"] += self.upgrade_labor
 
-                    build.append(
+                    upgrad.append(
                         {
                             "upgrader": agent.idx,
                             "loc": np.array(agent.loc),
@@ -154,13 +145,13 @@ class Upgrade(BaseComponent):
             else:
                 raise ValueError
 
-        self.upgrades.append(build)
+        self.upgrades.append(upgrad)
 
     def generate_observations(self):
         """
         See base_component.py for detailed description.
 
-        Here, agents observe their build skill. The planner does not observe anything
+        Here, players observe their upgrade skill. The planner does not observe anything
         from this component.
         """
 
@@ -176,12 +167,10 @@ class Upgrade(BaseComponent):
     def generate_masks(self, completions=0):
         """
         See base_component.py for detailed description.
-
-        Prevent building only if a landmark already occupies the agent's location.
         """
 
         masks = {}
-        # Mobile agents' build action is masked if they cannot build with their
+        # Players' upgrade action is masked if they cannot upgrade with their
         # current location and/or endowment
         for agent in self.world.agents:
             masks[agent.idx] = np.array([self.agent_can_upgrade(agent)])
@@ -218,7 +207,7 @@ class Upgrade(BaseComponent):
         """
         See base_component.py for detailed description.
 
-        Re-sample agents' building skills.
+        Re-sample players' upgrading skills.
         """
         world = self.world
 
@@ -239,8 +228,7 @@ class Upgrade(BaseComponent):
             else:
                 raise NotImplementedError
 
-            agent.state["upgrade_income"] = float(
-                pay_rate * self.upgrade_income)
+            agent.state["upgrade_income"] = float(pay_rate * self.upgrade_income)
             agent.state["upgrade_skill"] = float(sampled_skill)
 
             self.sampled_skills[agent.idx] = sampled_skill
@@ -249,11 +237,11 @@ class Upgrade(BaseComponent):
 
     def get_dense_log(self):
         """
-        Log builds.
+        Log upgrades.
 
         Returns:
-            builds (list): A list of build events. Each entry corresponds to a single
-                timestep and contains a description of any builds that occurred on
+            upgrades (list): A list of upgrade events. Each entry corresponds to a single
+                timestep and contains a description of any upgrades that occurred on
                 that timestep.
 
         """

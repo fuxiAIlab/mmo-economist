@@ -1,36 +1,31 @@
-# Copyright (c) 2020, salesforce.com, inc.
-# All rights reserved.
+# SPDX-FileCopyrightText: 2024 by NetEase, Inc., All Rights Reserved.
 # SPDX-License-Identifier: BSD-3-Clause
-# For full license text, see the LICENSE file in the repo root
-# or https://opensource.org/licenses/BSD-3-Clause
 
 import numpy as np
+
 from foundation.base.base_component import BaseComponent, component_registry
 from foundation.entities import resource_registry
 
 
 @component_registry.add
-class Market(BaseComponent):
-    """Allows mobile agents to buy/sell collectible resources with one another.
-
-    Implements a commodity-exchange-style market where agents may sell a unit of
-        resource by submitting an ask (saying the minimum it will accept in payment)
-        or may buy a resource by submitting a bid (saying the maximum it will pay in
-        exchange for a unit of a given resource).
+class Auction(BaseComponent):
+    """
+    Auction refers to any trade behavior involving free trade between players in the MMOs.
+    All tradable economic resources can be traded structured as a continuous double auction.
 
     Args:
-        max_bid_ask (int): Maximum amount of coin that an agent can bid or ask for.
-            Must be >= 1. Default is 10 coin.
-        order_labor (float): Amount of labor incurred when an agent creates an order.
+        max_bid_ask (int): Maximum amount of tokens that a player can bid or ask for.
+            Must be >= 1. Default is 10 tokens.
+        order_labor (float): Amount of labor incurred when a player creates an order.
             Must be >= 0. Default is 0.25.
         order_duration (int): Number of environment timesteps before an unfilled
             bid/ask expires. Must be >= 1. Default is 50 timesteps.
-        max_num_orders (int, optional): Maximum number of bids + asks that an agent can
+        max_num_orders (int, optional): Maximum number of bids + asks that a player can
             have open for a given resource. Must be >= 1. Default is no limit to
             number of orders.
     """
 
-    name = "Market"
+    name = "Auction"
     component_type = "Trade"
     required_entities = ["Mat", "Token", "Labor"]
     agent_subclasses = ["BasicPlayer"]
@@ -42,11 +37,11 @@ class Market(BaseComponent):
         order_labor=0.25,
         order_duration=50,
         max_num_orders=None,
-        **kwargs
+        **kwargs,
     ):
         super().__init__(*args, **kwargs)
 
-        # The max amount (in coin) that an agent can bid/ask for 1 unit of a commodity
+        # The max amount (in token) that a player can bid/ask for 1 unit of a commodity
         self.max_bid_ask = int(max_bid_ask)
         assert self.max_bid_ask >= 1
         self.price_floor = 0
@@ -57,7 +52,7 @@ class Market(BaseComponent):
         self.order_duration = int(order_duration)
         assert self.order_duration >= 1
 
-        # The maximum number of bid+ask orders an agent can have open
+        # The maximum number of bid+ask orders a player can have open
         # for each type of commodity
         self.max_num_orders = int(max_num_orders or self.order_duration)
         assert self.max_num_orders >= 1
@@ -103,11 +98,11 @@ class Market(BaseComponent):
 
     def available_asks(self, resource, agent):
         """
-        Get a histogram of asks for resource to which agent could bid against.
+        Get a histogram of asks for resource to which player could bid against.
 
         Args:
             resource (str): Name of the resource
-            agent (BasicMobileAgent or None): Object of agent for which available
+            agent (BasicPlayer or None): Object of player for which available
                 asks are being queried. If None, all asks are considered available.
 
         Returns:
@@ -126,11 +121,11 @@ class Market(BaseComponent):
 
     def available_bids(self, resource, agent):
         """
-        Get a histogram of bids for resource to which agent could ask against.
+        Get a histogram of bids for resource to which player could ask against.
 
         Args:
             resource (str): Name of the resource
-            agent (BasicMobileAgent or None): Object of agent for which available
+            agent (BasicPlayer or None): Object of player for which available
                 bids are being queried. If None, all bids are considered available.
 
         Returns:
@@ -148,29 +143,29 @@ class Market(BaseComponent):
         return bid_hist
 
     def can_bid(self, resource, agent):
-        """If agent can submit a bid for resource."""
+        """If player can submit a bid for resource."""
         return self.n_orders[resource][agent.idx] < self.max_num_orders
 
     def can_ask(self, resource, agent):
-        """If agent can submit an ask for resource."""
+        """If player can submit an ask for resource."""
         return (
             self.n_orders[resource][agent.idx] < self.max_num_orders
             and agent.state["inventory"][resource] > 0
         )
 
-    # Core components for this market
+    # Core components for this auction
     # -------------------------------
 
     def create_bid(self, resource, agent, max_payment):
-        """Create a new bid for resource, with agent offering max_payment.
+        """Create a new bid for resource, with player offering max_payment.
 
         On a successful trade, payment will be at most max_payment, possibly less.
 
-        The agent places the bid coin into escrow so that it may not be spent on
+        The player places the bid token into escrow so that it may not be spent on
         something else while the order exists.
         """
 
-        # The agent is past the max number of orders
+        # The player is past the max number of orders
         # or doesn't have enough money, do nothing
         if (not self.can_bid(resource, agent)) or agent.state["inventory"][
             "Token"
@@ -183,11 +178,10 @@ class Market(BaseComponent):
 
         # Add this to the bid book
         self.bids[resource].append(bid)
-        self.bid_hists[resource][bid["buyer"]
-                                 ][bid["bid"] - self.price_floor] += 1
+        self.bid_hists[resource][bid["buyer"]][bid["bid"] - self.price_floor] += 1
         self.n_orders[resource][agent.idx] += 1
 
-        # Set aside whatever money the agent is willing to pay
+        # Set aside whatever money the player is willing to pay
         # (will get excess back if price ends up being less)
         _ = agent.inventory_to_escrow("Token", int(max_payment))
 
@@ -196,14 +190,14 @@ class Market(BaseComponent):
 
     def create_ask(self, resource, agent, min_income):
         """
-        Create a new ask for resource, with agent asking for min_income.
+        Create a new ask for resource, with player asking for min_income.
 
         On a successful trade, income will be at least min_income, possibly more.
 
-        The agent places one unit of resource into escrow so that it may not be used
+        The player places one unit of resource into escrow so that it may not be used
         for something else while the order exists.
         """
-        # The agent is past the max number of orders
+        # The player is past the max number of orders
         # or doesn't the resource it's trying to sell, do nothing
         if not self.can_ask(resource, agent):
             return
@@ -215,11 +209,10 @@ class Market(BaseComponent):
 
         # Add this to the ask book
         self.asks[resource].append(ask)
-        self.ask_hists[resource][ask["seller"]
-                                 ][ask["ask"] - self.price_floor] += 1
+        self.ask_hists[resource][ask["seller"]][ask["ask"] - self.price_floor] += 1
         self.n_orders[resource][agent.idx] += 1
 
-        # Set aside the resource the agent is willing to sell
+        # Set aside the resource the player is willing to sell
         amount = agent.inventory_to_escrow(resource, 1)
         assert amount == 1
 
@@ -250,8 +243,7 @@ class Market(BaseComponent):
                 reverse=True,
             )
             asks = sorted(
-                self.asks[resource], key=lambda a: (
-                    a["ask"], -a["ask_lifetime"])
+                self.asks[resource], key=lambda a: (a["ask"], -a["ask_lifetime"])
             )
 
             while any(possible_match) and keep_checking:
@@ -361,7 +353,6 @@ class Market(BaseComponent):
         world = self.world
 
         for resource in self.commodities:
-
             bids_ = []
             for bid in self.bids[resource]:
                 bid["bid_lifetime"] += 1
@@ -462,8 +453,7 @@ class Market(BaseComponent):
 
                 # Create a bid
                 elif resource_action <= self.max_bid_ask + 1:
-                    self.create_bid(resource, agent,
-                                    max_payment=resource_action - 1)
+                    self.create_bid(resource, agent, max_payment=resource_action - 1)
 
                 else:
                     raise ValueError
@@ -480,8 +470,7 @@ class Market(BaseComponent):
 
                 # Create an ask
                 elif resource_action <= self.max_bid_ask + 1:
-                    self.create_ask(resource, agent,
-                                    min_income=resource_action - 1)
+                    self.create_ask(resource, agent, min_income=resource_action - 1)
 
                 else:
                     raise ValueError
@@ -494,10 +483,10 @@ class Market(BaseComponent):
         """
         See base_component.py for detailed description.
 
-        Here, agents and the planner both observe historical market behavior and
-        outstanding bids/asks for each tradable commodity. Agents only see the
+        Here, players and the planner both observe historical market behavior and
+        outstanding bids/asks for each tradable commodity. Players only see the
         outstanding bids/asks to which they could respond (that is, that they did not
-        submit). Agents also see their own outstanding bids/asks.
+        submit). Players also see their own outstanding bids/asks.
         """
         world = self.world
 
@@ -506,8 +495,7 @@ class Market(BaseComponent):
         prices = np.arange(self.price_floor, self.price_ceiling + 1)
         for c in self.commodities:
             net_price_history = np.sum(
-                np.stack([self.price_history[c][i]
-                         for i in range(self.n_agents)]),
+                np.stack([self.price_history[c][i] for i in range(self.n_agents)]),
                 axis=0,
             )
             market_rate = prices.dot(net_price_history) / np.maximum(
@@ -528,7 +516,7 @@ class Market(BaseComponent):
             )
 
             for _, agent in enumerate(world.agents):
-                # Private to the agent
+                # Private to the player
                 obs[agent.idx].update(
                     {
                         "market_rate-{}".format(c): market_rate,
@@ -548,7 +536,7 @@ class Market(BaseComponent):
         """
         See base_component.py for detailed description.
 
-        Agents cannot submit bids/asks for resources where they are at the order
+        Players cannot submit bids/asks for resources where they are at the order
         limit. In addition, they may only submit asks for resources they possess and
         bids for which they can pay.
         """
@@ -559,8 +547,7 @@ class Market(BaseComponent):
         for agent in world.agents:
             masks[agent.idx] = {}
 
-            can_pay = np.arange(self.max_bid_ask +
-                                1) <= agent.inventory["Token"]
+            can_pay = np.arange(self.max_bid_ask + 1) <= agent.inventory["Token"]
 
             for resource in self.commodities:
                 if not self.can_ask(resource, agent):  # asks_maxed:
@@ -676,8 +663,8 @@ class Market(BaseComponent):
         Log executed trades.
 
         Returns:
-            trades (list): A list of trade events. Each entry corresponds to a single
-                timestep and contains a description of any trades that occurred on
+            trades (list): A list of auction events. Each entry corresponds to a single
+                timestep and contains a description of any auction that occurred on
                 that timestep.
         """
         return self.executed_trades

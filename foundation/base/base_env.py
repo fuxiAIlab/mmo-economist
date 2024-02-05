@@ -191,7 +191,6 @@ class BaseEnvironment(ABC):
         collate_agent_step_and_reset_data=False,
         seed=None,
     ):
-
         # Make sure a name was declared by child class
         assert self.name
 
@@ -331,7 +330,7 @@ class BaseEnvironment(ABC):
                 self._episode_length,
                 inventory_scale=self.inv_scale,
                 endogenous_scale=self.end_scale,
-                **component_kwargs
+                **component_kwargs,
             )
             self._components.append(component_object)
             self._components_dict[component_object.name] = component_object
@@ -1043,7 +1042,7 @@ class BaseEnvironment(ABC):
             return True
         else:
             return False
-    
+
     # The following methods must be implemented for each scenario
     # -----------------------------------------------------------
 
