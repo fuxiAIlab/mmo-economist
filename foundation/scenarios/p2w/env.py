@@ -43,7 +43,7 @@ class P2WEnvironment(BaseEnvironment):
         player_nonmonetary_cost_dist="normal",
         player_utility_income_fxrate=1.0,
         planner_reward_type="utility1",
-        mixing_weight_gini_vs_coin=0.0,
+        mixing_weight_e_vs_p=0.0,
         **base_env_kwargs,
     ):
         super().__init__(*base_env_args, **base_env_kwargs)
@@ -57,6 +57,7 @@ class P2WEnvironment(BaseEnvironment):
         self._player_observation_range = int(player_observation_range)
 
         self._checker_source_blocks = bool(checker_source_blocks)
+
         c, r = np.meshgrid(
             np.arange(self.world_size[1]) % 2, np.arange(self.world_size[0]) % 2
         )
@@ -66,7 +67,7 @@ class P2WEnvironment(BaseEnvironment):
         if not isinstance(initial_p2w_setting, dict):
             initial_p2w_setting = eval(initial_p2w_setting)
         assert isinstance(initial_p2w_setting, dict)
-        self._initial_p2w_setting = initial_p2w_setting
+        self._base_p2w_setting = initial_p2w_setting
 
         self.init_p2w_setting()
         self._source_maps = self.init_map_layout()
@@ -106,8 +107,8 @@ class P2WEnvironment(BaseEnvironment):
         # How much to weight equality if using SWF=eq*prod:
         # 0 -> SWF=eq*prod
         # 1 -> SWF=prod
-        self.mixing_weight_gini_vs_coin = float(mixing_weight_gini_vs_coin)
-        assert 0 <= self.mixing_weight_gini_vs_coin <= 1.0
+        self.mixing_weight_e_vs_p = float(mixing_weight_e_vs_p)
+        assert 0 <= self.mixing_weight_e_vs_p <= 1.0
 
         # Use this to calculate marginal changes and deliver that as reward
         self.init_optimization_metric = {agent.idx: 0 for agent in self.all_agents}
@@ -153,8 +154,8 @@ class P2WEnvironment(BaseEnvironment):
         ]
 
     @property
-    def initial_p2w_setting(self):
-        return self._initial_p2w_setting
+    def base_p2w_setting(self):
+        return self._base_p2w_setting
 
     @property
     def curr_p2w_setting(self):
@@ -240,10 +241,12 @@ class P2WEnvironment(BaseEnvironment):
     def init_p2w_setting(self):
         self._periods = 0
         self._steps_in_period = 0
-        self._curr_p2w_setting = deepcopy(self._initial_p2w_setting)
-        self._last_p2w_setting = deepcopy(self._initial_p2w_setting)
-        self._last_p2w_setting = self.get_component("Adjust").base_adjust
-        self._curr_p2w_setting = self.get_component("Adjust").base_adjust
+
+        self._curr_p2w_setting = deepcopy(self._base_p2w_setting)
+        self._last_p2w_setting = deepcopy(self._base_p2w_setting)
+
+        self._curr_p2w_adjust = self.get_component("Adjust").base_adjust
+        self._last_p2w_adjust = self.get_component("Adjust").base_adjust
 
         self._metrics_for_timesteps = {
             "profitability": [],
@@ -316,7 +319,7 @@ class P2WEnvironment(BaseEnvironment):
                 nonmonetary_incomes=np.array(
                     [agent.state["endogenous"]["CAP"] for agent in self.world.agents]
                 ),
-                equality_weight=1 - self.mixing_weight_gini_vs_coin,
+                equality_weight=1 - self.mixing_weight_e_vs_p,
             )
         elif self.planner_reward_type == "utility1_norm":
             curr_optimization_metric[
@@ -332,7 +335,7 @@ class P2WEnvironment(BaseEnvironment):
                 nonmonetary_incomes=np.array(
                     [agent.state["endogenous"]["CAP"] for agent in self.world.agents]
                 ),
-                equality_weight=1 - self.mixing_weight_gini_vs_coin,
+                equality_weight=1 - self.mixing_weight_e_vs_p,
             )
         elif self.planner_reward_type == "utility2":
             curr_optimization_metric[
@@ -347,7 +350,7 @@ class P2WEnvironment(BaseEnvironment):
                 nonmonetary_incomes=np.array(
                     [agent.state["endogenous"]["CAP"] for agent in self.world.agents]
                 ),
-                equality_weight=1 - self.mixing_weight_gini_vs_coin,
+                equality_weight=1 - self.mixing_weight_e_vs_p,
             )
         elif self.planner_reward_type == "utility2_norm":
             curr_optimization_metric[
@@ -364,7 +367,7 @@ class P2WEnvironment(BaseEnvironment):
                     [agent.state["endogenous"]["CAP"] for agent in self.world.agents]
                 ),
                 exp_nonmonetary_incomes=100 * self._max_period,
-                equality_weight=1 - self.mixing_weight_gini_vs_coin,
+                equality_weight=1 - self.mixing_weight_e_vs_p,
             )
         else:
             raise NotImplementedError
@@ -523,42 +526,42 @@ class P2WEnvironment(BaseEnvironment):
                 # 随机投放（异步，即每个物品都随机）
                 adjust_rates = self.get_component("Adjust").adjust_rates
                 base_adjust = self.get_component("Adjust").base_adjust
-                self._last_p2w_setting = deepcopy(self._curr_p2w_setting)
+                self._last_p2w_adjust = deepcopy(self._curr_p2w_adjust)
 
-                self._curr_p2w_setting = {
+                self._curr_p2w_adjust = {
                     k: base_adjust[k]
                     + adjust_rates[random.randint(0, len(adjust_rates) - 1)]
-                    for k, _ in self._last_p2w_setting.items()
+                    for k, _ in self._last_p2w_adjust.items()
                 }
                 self._curr_p2w_setting = {
-                    k: int(self._initial_p2w_setting[k] * v)
-                    for k, v in self._curr_p2w_setting.items()
+                    k: int(self._base_p2w_setting[k] * v)
+                    for k, v in self._curr_p2w_adjust.items()
                 }
             elif self._adjust_type == "random-syn":
                 # 随机投放（同步，即随机一次，每个物品相同）
                 adjust_rates = self.get_component("Adjust").adjust_rates
                 base_adjust = self.get_component("Adjust").base_adjust
-                self._last_p2w_setting = deepcopy(self._curr_p2w_setting)
-                adjustment_rate = adjust_rates[random.randint(0, len(adjust_rates) - 1)]
-                self._curr_p2w_setting = {
-                    k: base_adjust[k] + adjustment_rate
-                    for k, _ in self._last_p2w_setting.items()
+                self._last_p2w_adjust = deepcopy(self._curr_p2w_adjust)
+                adjust_rate = adjust_rates[random.randint(0, len(adjust_rates) - 1)]
+                self._curr_p2w_adjust = {
+                    k: base_adjust[k] + adjust_rate
+                    for k, _ in self._last_p2w_adjust.items()
                 }
                 self._curr_p2w_setting = {
-                    k: int(self._initial_p2w_setting[k] * v)
-                    for k, v in self._curr_p2w_setting.items()
+                    k: int(self._base_p2w_setting[k] * v)
+                    for k, v in self._curr_p2w_adjust.items()
                 }
             elif self._adjust_type == "greedy-equ":
                 # 贪心投放（公平性优先）
                 adjust_rates = self.get_component("Adjust").adjust_rates
                 base_adjust = self.get_component("Adjust").base_adjust
-                self._last_p2w_setting = deepcopy(self._curr_p2w_setting)
+                self._last_p2w_adjust = deepcopy(self._curr_p2w_adjust)
                 if (
                     self._metrics_for_periods["equality"][-1]
                     < self._metrics_for_periods["equality"][-2]
                 ):
                     # 公平性下降时，增加投放量
-                    self._curr_p2w_setting = {
+                    self._curr_p2w_adjust = {
                         k: base_adjust[k]
                         + adjust_rates[
                             min(
@@ -568,7 +571,7 @@ class P2WEnvironment(BaseEnvironment):
                                 len(adjust_rates) - 1,
                             )
                         ]
-                        for k, v in self._last_p2w_setting.items()
+                        for k, v in self._last_p2w_adjust.items()
                     }
                 else:
                     # 公平性不变或者上升时，再看盈利性
@@ -577,7 +580,7 @@ class P2WEnvironment(BaseEnvironment):
                         < self._metrics_for_periods["profitability"][-2]
                     ):
                         # 盈利性下降，减少投放量
-                        self._curr_p2w_setting = {
+                        self._curr_p2w_adjust = {
                             k: base_adjust[k]
                             + adjust_rates[
                                 max(
@@ -588,28 +591,28 @@ class P2WEnvironment(BaseEnvironment):
                                     0,
                                 )
                             ]
-                            for k, v in self._last_p2w_setting.items()
+                            for k, v in self._last_p2w_adjust.items()
                         }
                     else:
                         # 盈利性不变或者上升，保持上次投放量
-                        self._curr_p2w_setting = deepcopy(self._last_p2w_setting)
+                        self._curr_p2w_adjust = deepcopy(self._last_p2w_adjust)
 
                 self._curr_p2w_setting = {
-                    k: int(self._initial_p2w_setting[k] * v)
-                    for k, v in self._curr_p2w_setting.items()
+                    k: int(self._base_p2w_setting[k] * v)
+                    for k, v in self._curr_p2w_adjust.items()
                 }
 
             elif self._adjust_type == "greedy-pro":
                 # 贪心投放（盈利性优先）
                 adjust_rates = self.get_component("Adjust").adjust_rates
                 base_adjust = self.get_component("Adjust").base_adjust
-                self._last_p2w_setting = deepcopy(self._curr_p2w_setting)
+                self._last_p2w_adjust = deepcopy(self._curr_p2w_adjust)
                 if (
                     self._metrics_for_periods["profitability"][-1]
                     < self._metrics_for_periods["profitability"][-2]
                 ):
                     # 盈利性下降时，减少投放量
-                    self._curr_p2w_setting = {
+                    self._curr_p2w_adjust = {
                         k: base_adjust[k]
                         + adjust_rates[
                             max(
@@ -619,7 +622,7 @@ class P2WEnvironment(BaseEnvironment):
                                 0,
                             )
                         ]
-                        for k, v in self._last_p2w_setting.items()
+                        for k, v in self._last_p2w_adjust.items()
                     }
                 else:
                     # 盈利性不变或者上升时，再看公平性
@@ -628,7 +631,7 @@ class P2WEnvironment(BaseEnvironment):
                         < self._metrics_for_periods["equality"][-2]
                     ):
                         # 公平性下降时，增加投放量
-                        self._curr_p2w_setting = {
+                        self._curr_p2w_adjust = {
                             k: base_adjust[k]
                             + adjust_rates[
                                 min(
@@ -639,29 +642,28 @@ class P2WEnvironment(BaseEnvironment):
                                     len(adjust_rates) - 1,
                                 )
                             ]
-                            for k, v in self._last_p2w_setting.items()
+                            for k, v in self._last_p2w_adjust.items()
                         }
                     else:
                         # 公平性不变或者上升，保持上次投放量
-                        self._curr_p2w_setting = deepcopy(self._last_p2w_setting)
+                        self._curr_p2w_adjust = deepcopy(self._last_p2w_adjust)
 
                 self._curr_p2w_setting = {
-                    k: int(self._initial_p2w_setting[k] * v)
-                    for k, v in self._curr_p2w_setting.items()
+                    k: int(self._base_p2w_setting[k] * v)
+                    for k, v in self._curr_p2w_adjust.items()
                 }
             elif self._adjust_type == "planner":
                 # AI动态投放
-                self._last_p2w_setting = deepcopy(self._curr_p2w_setting)
-                self._curr_p2w_setting = self.get_component("Adjust").curr_adjust
+                self._last_p2w_adjust = deepcopy(self._curr_p2w_adjust)
+                self._curr_p2w_adjust = self.get_component("Adjust").curr_adjust
                 self._curr_p2w_setting = {
-                    k: int(self._initial_p2w_setting[k] * v)
-                    for k, v in self._curr_p2w_setting.items()
+                    k: int(self._base_p2w_setting[k] * v)
+                    for k, v in self._curr_p2w_adjust.items()
                 }
                 self.get_component("Adjust").start_new_adjust()
             else:
                 raise NotImplementedError
 
-            # self.reset_starting_layout()
             self.world.maps.clear()
             self._source_maps = self.init_map_layout()
 

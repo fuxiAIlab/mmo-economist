@@ -9,7 +9,7 @@
 
 from foundation.base.base_env import scenario_registry
 
-from .p2w import p2w_env
+from .p2w import env
 
 # Import files that add Scenario class(es) to scenario_registry
 # -------------------------------------------------------------
