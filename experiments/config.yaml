@@ -27,7 +27,7 @@ env:
       order_duration: 50
       order_labor: 1.0
   - LaunchReadjustment: 
-      is_biadjustment: True
+      is_biadjustment: true
       adjustment_period: 500
       adjustment_rate_max: 0.3 
       adjustment_rate_min: 0.0 
@@ -49,7 +49,7 @@ env:
   planner_gets_spatial_info: true 
   full_observability: false
   player_observation_range: 5
-  allow_observation_scaling: True
+  allow_observation_scaling: true
   starting_player_token: 0
   starting_player_currency: 100
   player_monetary_cost_dist: pareto 

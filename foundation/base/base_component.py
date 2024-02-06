@@ -133,7 +133,7 @@ class BaseComponent(ABC):
         of get_observations().
         """
         return self._endogenous_scale
-    
+
     # @property
     # def shorthand(self):
     #     """The shorthand name, or name if no component_type is defined."""
@@ -142,7 +142,11 @@ class BaseComponent(ABC):
     @property
     def shorthand(self):
         """The shorthand name, or name if no component_type is defined."""
-        return self.name if self.component_type is None else self.component_type + '_' + self.name
+        return (
+            self.name
+            if self.component_type is None
+            else self.component_type + "_" + self.name
+        )
 
     @staticmethod
     def check_world(world):

@@ -1,3 +1,7 @@
+# This file was modified by NetEase, Inc. in 2024-02-04
+# SPDX-FileCopyrightText: 2024 by NetEase, Inc., All Rights Reserved.
+# SPDX-License-Identifier: BSD-3-Clause
+
 # Copyright (c) 2020, salesforce.com, inc.
 # All rights reserved.
 # SPDX-License-Identifier: BSD-3-Clause
@@ -10,7 +14,7 @@ from foundation.base.base_agent import BaseAgent, agent_registry
 @agent_registry.add
 class BasicPlanner(BaseAgent):
     """
-    A basic planner agent represents a social planner that sets macroeconomic policy.
+    A basic planner agent represents a game designer that sets MMO macroeconomic policy.
 
     Unlike the "mobile" agent, the planner does not represent an embodied agent in
     the world environment. BasicPlanner modifies the BaseAgent class to remove

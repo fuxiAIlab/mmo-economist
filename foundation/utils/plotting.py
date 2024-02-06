@@ -1,13 +1,23 @@
+# SPDX-FileCopyrightText: 2024 by NetEase, Inc., All Rights Reserved.
+# SPDX-License-Identifier: BSD-3-Clause
+
+# Copyright (c) 2020, salesforce.com, inc.
+# All rights reserved.
+# SPDX-License-Identifier: BSD-3-Clause
+# For full license text, see the LICENSE file in the repo root
+# or https://opensource.org/licenses/BSD-3-Clause
+
 import matplotlib.pyplot as plt
 import numpy as np
-from foundation import landmarks
 from IPython import display
+
+from foundation import landmarks
 
 
 def do_plot(env, ax, fig):
     """Plots world state during episode sampling."""
     plot_env_state(env, ax)
-    ax.set_aspect('equal')
+    ax.set_aspect("equal")
     display.display(fig)
     display.clear_output(wait=True)
 
@@ -106,8 +116,7 @@ def plot_log_state(dense_log, t, ax=None, remap_key=None):
     else:
         assert isinstance(remap_key, str)
         key_val = np.array(
-            [dense_log["states"][0][str(i)][remap_key]
-             for i in range(n_agents)]
+            [dense_log["states"][0][str(i)][remap_key] for i in range(n_agents)]
         )
         cmap_order = np.argsort(key_val).tolist()
 
@@ -141,8 +150,7 @@ def vis_world_array(dense_logs, ts, eps=None, axes=None, remap_key=None):
 
     for ti, t in enumerate(ts):
         for ei, ep in enumerate(eps):
-            plot_log_state(dense_logs[ep], t,
-                           ax=axes[ei, ti], remap_key=remap_key)
+            plot_log_state(dense_logs[ep], t, ax=axes[ei, ti], remap_key=remap_key)
 
     for ax, t in zip(axes[0], ts):
         ax.set_title("T = {}".format(t))
@@ -152,15 +160,16 @@ def vis_world_array(dense_logs, ts, eps=None, axes=None, remap_key=None):
     return fig
 
 
-def vis_world_range(dense_logs, t0=0, tN=None, N=5, eps=None, axes=None, remap_key=None):
+def vis_world_range(
+    dense_logs, t0=0, tN=None, N=5, eps=None, axes=None, remap_key=None
+):
     dense_logs, eps = _format_logs_and_eps(dense_logs, eps)
 
-    viable_ts = np.array(
-        [i for i, w in enumerate(dense_logs[0]["world"]) if w])
+    viable_ts = np.array([i for i, w in enumerate(dense_logs[0]["world"]) if w])
     if tN is None:
         tN = viable_ts[-1]
     assert 0 <= t0 < tN
-    target_ts = np.linspace(t0, tN, N).astype(np.int)
+    target_ts = np.linspace(t0, tN, N).astype(int)
 
     ts = set()
     for tt in target_ts:
@@ -187,8 +196,7 @@ def trade_str(c_trades, resource, agent, income=True):
 
 def full_trade_str(c_trades, resource, a_indices, income=True):
     s_head = "{} ({})".format("Income" if income else "Cost", resource)
-    ac_strings = [trade_str(c_trades, resource, buyer, income)
-                  for buyer in a_indices]
+    ac_strings = [trade_str(c_trades, resource, buyer, income) for buyer in a_indices]
     s_tail = " | ".join(ac_strings)
     return "{:<15}: {}".format(s_head, s_tail)
 
@@ -212,8 +220,7 @@ def full_build_str(all_builds, a_indices):
 
 def header_str(n_agents):
     s_head = ("_" * 15) + ":_"
-    s_tail = "_|_".join([" Agent {:2d} ____".format(i)
-                        for i in range(n_agents)])
+    s_tail = "_|_".join([" Agent {:2d} ____".format(i) for i in range(n_agents)])
     return s_head + s_tail
 
 
@@ -235,30 +242,17 @@ def breakdown(log, remap_key=None):
     fig0 = vis_world_range(log, remap_key=remap_key)
 
     n = len(list(log["states"][0].keys())) - 1
-    # trading_active = "Trade" in log
-    trading_active = any(["Market" in k for k in log.keys()])
+    trading_active = any(["Auction" in k for k in log.keys()])
     if remap_key is None:
         aidx = list(range(n))
     else:
         assert isinstance(remap_key, str)
-        key_vals = np.array([log["states"][0][str(i)][remap_key]
-                            for i in range(n)])
+        key_vals = np.array([log["states"][0][str(i)][remap_key] for i in range(n)])
         aidx = np.argsort(key_vals).tolist()
 
-    # all_builds = []
-    # for t, builds in enumerate(log["Build"]):
-    #     if isinstance(builds, dict):
-    #         builds_ = builds["builds"]
-    #     else:
-    #         builds_ = builds
-    #     for build in builds_:
-    #         this_build = {"t": t}
-    #         this_build.update(build)
-    #         all_builds.append(this_build)
-
     if trading_active:
-        c_trades = {"Mat": []}
-        for t, trades in enumerate(log["Trade_Market"]):
+        c_trades = {"MAT": []}
+        for t, trades in enumerate(log["Trade_Auction"]):
             if isinstance(trades, dict):
                 trades_ = trades["trades"]
             else:
@@ -273,63 +267,41 @@ def breakdown(log, remap_key=None):
                 c_trades[trade["commodity"]].append(this_trade)
 
         incomes = {
-            "Sell Mat": [
-                sum([t["income"]
-                    for t in c_trades["Mat"] if t["seller"] == aidx[i]])
+            "Sell MAT": [
+                sum([t["income"] for t in c_trades["MAT"] if t["seller"] == aidx[i]])
                 for i in range(n)
             ],
-            "Buy Mat": [
-                sum([-t["price"]
-                    for t in c_trades["Mat"] if t["buyer"] == aidx[i]])
+            "Buy MAT": [
+                sum([-t["price"] for t in c_trades["MAT"] if t["buyer"] == aidx[i]])
                 for i in range(n)
             ],
-            # "Sell Wood": [
-            #     sum([t["income"] for t in c_trades["Wood"] if t["seller"] == aidx[i]])
-            #     for i in range(n)
-            # ],
-            # "Buy Wood": [
-            #     sum([-t["price"] for t in c_trades["Wood"] if t["buyer"] == aidx[i]])
-            #     for i in range(n)
-            # ],
-            # "Build": [
-            #     sum([b["income"] for b in all_builds if b["builder"] == aidx[i]])
-            #     for i in range(n)
-            # ],
         }
 
     else:
         c_trades = None
-        incomes = {
-            # "Build": [
-            #     sum([b["income"] for b in all_builds if b["builder"] == aidx[i]])
-            #     for i in range(n)
-            # ],
-        }
+        incomes = {}
 
     incomes["Total"] = np.stack([v for v in incomes.values()]).sum(axis=0)
 
     endows = [
         int(
-            log["states"][-1][str(aidx[i])]["inventory"]["Token"]
-            + log["states"][-1][str(aidx[i])]["escrow"]["Token"]
+            log["states"][-1][str(aidx[i])]["inventory"]["TOK"]
+            + log["states"][-1][str(aidx[i])]["escrow"]["TOK"]
         )
         for i in range(n)
     ]
 
     n_small = np.minimum(10, n)
 
-    # report(c_trades, all_builds, n, aidx)
-
     cmap = plt.get_cmap("jet", n)
-    rs = ["Mat", "Exp", "Token", "Currency"]
+    rs = ["MAT", "EXP", "TOK", "CCY"]
 
     fig1, axes = plt.subplots(1, len(rs), figsize=(16, 4), sharey=False)
     for r, ax in zip(rs, axes):
         for i in range(n):
             ax.plot(
                 [
-                    x[str(aidx[i])]["inventory"][r] +
-                    x[str(aidx[i])]["escrow"][r]
+                    x[str(aidx[i])]["inventory"][r] + x[str(aidx[i])]["escrow"][r]
                     for x in log["states"]
                 ],
                 label=i,
@@ -337,9 +309,9 @@ def breakdown(log, remap_key=None):
             )
         ax.set_title(r)
         ax.legend()
-        ax.grid(b=True)
+        ax.grid()
 
-    rs = ["Labor", "Capability"]
+    rs = ["LAB", "CAP"]
     fig2, axes = plt.subplots(1, len(rs), figsize=(16, 4), sharey=False)
     for r, ax in zip(rs, axes):
         for i in range(n):
@@ -350,20 +322,9 @@ def breakdown(log, remap_key=None):
             )
         ax.set_title(r)
         ax.legend()
-        ax.grid(b=True)
+        ax.grid()
 
-    # ax = axes[-1]
-    # for i in range(n):
-    #     ax.plot(
-    #         [x[str(aidx[i])]["endogenous"]["Labor"] for x in log["states"]],
-    #         label=i,
-    #         color=cmap(i),
-    #     )
-    # ax.set_title("Labor")
-    # ax.legend()
-    # ax.grid(b=True)
-
-    tmp = np.array(log["world"][0]["Mat"])
+    tmp = np.array(log["world"][0]["MAT"])
     fig3, axes = plt.subplots(
         2 if trading_active else 1,
         n_small,
@@ -373,8 +334,7 @@ def breakdown(log, remap_key=None):
         squeeze=False,
     )
     for i, ax in enumerate(axes[0]):
-        rows = np.array([x[str(aidx[i])]["loc"][0]
-                        for x in log["states"]]) * -1
+        rows = np.array([x[str(aidx[i])]["loc"][0] for x in log["states"]]) * -1
         cols = np.array([x[str(aidx[i])]["loc"][1] for x in log["states"]])
         ax.plot(cols[::20], rows[::20])
         ax.plot(cols[0], rows[0], "r*", markersize=15)
@@ -385,7 +345,7 @@ def breakdown(log, remap_key=None):
 
     if trading_active:
         for i, ax in enumerate(axes[1]):
-            for r in ["Mat"]:
+            for r in ["MAT"]:
                 tmp = [
                     (s["t"], s["income"]) for s in c_trades[r] if s["seller"] == aidx[i]
                 ]
@@ -395,13 +355,13 @@ def breakdown(log, remap_key=None):
                         np.stack([ts, ts]),
                         np.stack([np.zeros_like(prices), prices]),
                         color=np.array([0, 0, 0]) / 255.0,
-                        # color=resources.get(r).color,
                     )
-                    # ax.plot(
-                    #     ts, prices, ".", color=resources.get(r).color, markersize=12
-                    # )
                     ax.plot(
-                        ts, prices, ".", color=np.array([0, 0, 0]) / 255.0, markersize=12
+                        ts,
+                        prices,
+                        ".",
+                        color=np.array([0, 0, 0]) / 255.0,
+                        markersize=12,
                     )
 
                 tmp = [
@@ -412,20 +372,18 @@ def breakdown(log, remap_key=None):
                     ax.plot(
                         np.stack([ts, ts]),
                         np.stack([np.zeros_like(prices), prices]),
-                        # color=resources.get(r).color,
                         color=np.array([0, 0, 0]) / 255.0,
                     )
-                    # ax.plot(
-                    #     ts, prices, ".", color=resources.get(r).color, markersize=12
-                    # )
                     ax.plot(
-                        ts, prices, ".", color=np.array([0, 0, 0]) / 255.0, markersize=12
+                        ts,
+                        prices,
+                        ".",
+                        color=np.array([0, 0, 0]) / 255.0,
+                        markersize=12,
                     )
             ax.plot([-20, len(log["states"]) + 19], [0, 0], "w-")
             # ax.set_ylim([-10.2, 10.2]);
             ax.set_xlim([-20, len(log["states"]) + 19])
-            ax.grid(b=True)
+            ax.grid()
             ax.set_facecolor([0.3, 0.3, 0.3])
-
-    # return (fig0, fig1, fig2, fig3), incomes, endows, c_trades
     return (fig0, fig1, fig2, fig3)
