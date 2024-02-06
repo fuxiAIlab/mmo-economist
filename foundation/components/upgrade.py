@@ -26,7 +26,7 @@ class Upgrade(BaseComponent):
 
     name = "Upgrade"
     component_type = "Consumption"
-    required_entities = ["Exp", "Mat", "Token", "Labor", "Capability"]
+    required_entities = ["EXP", "MAT", "TOK", "LAB", "CAP"]
     agent_subclasses = ["BasicPlayer"]
 
     def __init__(
@@ -44,7 +44,7 @@ class Upgrade(BaseComponent):
         assert self.payment_max_skill_multiplier >= 1
 
         # The resources required to upgrade
-        self.resource_cost = {"Exp": 1, "Mat": 1, "Token": 1}
+        self.resource_cost = {"EXP": 1, "MAT": 1, "TOK": 1}
 
         self.upgrade_income = int(upgrade_income)
         assert self.upgrade_income >= 0
@@ -127,12 +127,10 @@ class Upgrade(BaseComponent):
                         agent.state["inventory"][resource] -= cost
 
                     # Receive capabilities for upgrading
-                    agent.state["endogenous"]["Capability"] += agent.state[
-                        "upgrade_income"
-                    ]
+                    agent.state["endogenous"]["CAP"] += agent.state["upgrade_income"]
 
                     # Incur the labor cost for upgrading
-                    agent.state["endogenous"]["Labor"] += self.upgrade_labor
+                    agent.state["endogenous"]["LAB"] += self.upgrade_labor
 
                     upgrad.append(
                         {

@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2024 by NetEase, Inc., All Rights Reserved.
+# SPDX-License-Identifier: BSD-3-Clause
+
 # Copyright (c) 2020, salesforce.com, inc.
 # All rights reserved.
 # SPDX-License-Identifier: BSD-3-Clause
@@ -30,13 +33,14 @@ endogenous_registry = Registry(Endogenous)
 
 
 @endogenous_registry.add
-class Labor(Endogenous):
-    """Labor accumulated through tasking. Included in all environments by default."""
+class LAB(Endogenous):
+    """LAB (labor) accumulated through all behaviors. Included in all environments by default."""
 
     name = "Labor"
 
-@endogenous_registry.add
-class Capability(Endogenous):
-    """Capability accumulated through improving."""
 
-    name = "Capability"
+@endogenous_registry.add
+class CAP(Endogenous):
+    """CAP (capability) accumulated through upgrading."""
+
+    name = "CAP"

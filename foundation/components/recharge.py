@@ -21,7 +21,7 @@ class Recharge(BaseComponent):
 
     name = "Recharge"
     component_type = "Forex"
-    required_entities = ["Exp", "Mat", "Token", "Labor", "Capability"]
+    required_entities = ["TOK", "LAB", "CCY"]
     agent_subclasses = ["BasicPlayer"]
 
     def __init__(
@@ -34,7 +34,7 @@ class Recharge(BaseComponent):
         super().__init__(*base_component_args, **base_component_kwargs)
 
         # The resources required to recharge, which can also represent the exchange rate for recharging.
-        self.resource_cost = {"Currency": 1}
+        self.resource_cost = {"CCY": 1}
 
         self.recharge_income = int(recharge_income)
         assert self.recharge_income >= 0
@@ -109,10 +109,10 @@ class Recharge(BaseComponent):
                         agent.state["inventory"][resource] -= cost
 
                     # Receive payment for recharging
-                    agent.state["inventory"]["Token"] += agent.state["recharge_income"]
+                    agent.state["inventory"]["TOK"] += agent.state["recharge_income"]
 
                     # Incur the labor cost for recharging
-                    agent.state["endogenous"]["Labor"] += self.recharge_labor
+                    agent.state["endogenous"]["LAB"] += self.recharge_labor
 
                     recharge.append(
                         {

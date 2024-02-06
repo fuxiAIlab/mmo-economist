@@ -19,14 +19,14 @@ class Shop(BaseComponent):
 
     name = "Shop"
     component_type = "Trade"
-    required_entities = ["Exp", "Mat", "Token", "Labor"]
+    required_entities = ["EXP", "MAT", "TOK", "LAB"]
     agent_subclasses = ["BasicPlayer"]
 
     def __init__(self, *base_component_args, shop_labor=1.0, **base_component_kwargs):
         super().__init__(*base_component_args, **base_component_kwargs)
 
-        # The commodities that can be shopped for, and their fixed prices
-        self.commodities = {"Exp": {"Token": 10}, "Mat": {"Token": 10}}
+        # The commodities that can be shopped for, and their fixed prices in terms of tokens.
+        self.commodities = {"EXP": {"TOK": 10}, "MAT": {"TOK": 10}}
         maxes = dict()
         for _, x in self.commodities.items():
             for k, v in x.items():
@@ -111,7 +111,7 @@ class Shop(BaseComponent):
                     agent.state["inventory"][commodity] += 1
 
                     # Incur the labor cost for shopping
-                    agent.state["endogenous"]["Labor"] += self.shop_labor
+                    agent.state["endogenous"]["LAB"] += self.shop_labor
 
                     # Log the shop
                     shop.append(

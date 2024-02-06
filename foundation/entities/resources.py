@@ -1,9 +1,6 @@
-'''
-Author: Shiwei Zhao
-Date: 2023-08-18 10:45:20
-FilePath: \mmo-economist\foundation\entities\resources.py
-Copyright (c) 2023 by NetEase, Inc., All Rights Reserved.
-'''
+# SPDX-FileCopyrightText: 2024 by NetEase, Inc., All Rights Reserved.
+# SPDX-License-Identifier: BSD-3-Clause
+
 # Copyright (c) 2020, salesforce.com, inc.
 # All rights reserved.
 # SPDX-License-Identifier: BSD-3-Clause
@@ -32,7 +29,7 @@ class Resource:
     name = None
     color = None  # array of RGB values [0 - 1]
     collectible = None  # Is this something that exists in the world?
-    tradable = None  # Is this something that exists in the market?
+    tradable = None  # Is this something that exists in the auction?
     # (versus something that can only be owned)
 
     def __init__(self):
@@ -46,36 +43,40 @@ resource_registry = Registry(Resource)
 
 
 @resource_registry.add
-class Exp(Resource):
-    """Exp resource. green. collectible. untradable."""
-    name = "Exp"
+class EXP(Resource):
+    """EXP (experience) resource. green. collectible. untradable."""
+
+    name = "EXP"
     color = np.array([0, 255, 0]) / 255.0
     collectible = True
     tradable = False
 
 
 @resource_registry.add
-class Mat(Resource):
-    """Mat resource. red. collectible. tradable"""
-    name = "Mat"
+class MAT(Resource):
+    """MAT (material) resource. red. collectible. tradable"""
+
+    name = "MAT"
     color = np.array([255, 0, 0]) / 255.0
     collectible = True
     tradable = True
 
 
 @resource_registry.add
-class Token(Resource):
-    """Token resource. yellow. collectible. untradable"""
-    name = "Token"
+class TOK(Resource):
+    """TOK (token) resource. yellow. collectible. untradable"""
+
+    name = "TOK"
     color = np.array([255, 255, 0]) / 255.0
     collectible = True
     tradable = False
 
 
 @resource_registry.add
-class Currency(Resource):
-    """Currency resource. blue. uncollectible. untradable"""
-    name = "Currency"
+class CCY(Resource):
+    """CCY (Currency) resource. blue. uncollectible. untradable"""
+
+    name = "CCY"
     color = np.array([0, 0, 255]) / 255.0
     collectible = False
     tradable = False

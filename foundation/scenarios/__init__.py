@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2024 by NetEase, Inc., All Rights Reserved.
+# SPDX-License-Identifier: BSD-3-Clause
+
 # Copyright (c) 2020, salesforce.com, inc.
 # All rights reserved.
 # SPDX-License-Identifier: BSD-3-Clause
@@ -6,9 +9,7 @@
 
 from foundation.base.base_env import scenario_registry
 
-# from .covid19 import covid19_env
-# from .one_step_economy import one_step_economy
-from .sinkholes import sinkhole
+from .p2w import p2w_env
 
 # Import files that add Scenario class(es) to scenario_registry
 # -------------------------------------------------------------

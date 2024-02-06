@@ -27,7 +27,7 @@ class Auction(BaseComponent):
 
     name = "Auction"
     component_type = "Trade"
-    required_entities = ["Mat", "Token", "Labor"]
+    required_entities = ["MAT", "TOK", "LAB"]
     agent_subclasses = ["BasicPlayer"]
 
     def __init__(
@@ -168,7 +168,7 @@ class Auction(BaseComponent):
         # The player is past the max number of orders
         # or doesn't have enough money, do nothing
         if (not self.can_bid(resource, agent)) or agent.state["inventory"][
-            "Token"
+            "TOK"
         ] < max_payment:
             return
 
@@ -183,10 +183,10 @@ class Auction(BaseComponent):
 
         # Set aside whatever money the player is willing to pay
         # (will get excess back if price ends up being less)
-        _ = agent.inventory_to_escrow("Token", int(max_payment))
+        _ = agent.inventory_to_escrow("TOK", int(max_payment))
 
         # Incur the labor cost of creating an order
-        agent.state["endogenous"]["Labor"] += self.order_labor
+        agent.state["endogenous"]["LAB"] += self.order_labor
 
     def create_ask(self, resource, agent, min_income):
         """
@@ -217,7 +217,7 @@ class Auction(BaseComponent):
         assert amount == 1
 
         # Incur the labor cost of creating an order
-        agent.state["endogenous"]["Labor"] += self.order_labor
+        agent.state["endogenous"]["LAB"] += self.order_labor
 
     def match_orders(self):
         """
@@ -323,16 +323,16 @@ class Auction(BaseComponent):
 
                         # Buyer's money (already set aside) leaves escrow
                         pre_payment = int(trade["bid"])
-                        buyer.state["escrow"]["Token"] -= pre_payment
-                        assert buyer.state["escrow"]["Token"] >= 0
+                        buyer.state["escrow"]["TOK"] -= pre_payment
+                        assert buyer.state["escrow"]["TOK"] >= 0
 
                         # Payment is removed from the pre_payment
                         # and given to the seller. Excess returned to buyer.
                         payment_to_seller = int(trade["price"])
                         excess_payment_from_buyer = pre_payment - payment_to_seller
                         assert excess_payment_from_buyer >= 0
-                        seller.state["inventory"]["Token"] += payment_to_seller
-                        buyer.state["inventory"]["Token"] += excess_payment_from_buyer
+                        seller.state["inventory"]["TOK"] += payment_to_seller
+                        buyer.state["inventory"]["TOK"] += excess_payment_from_buyer
 
                         # Restart the inner loop
                         break
@@ -363,7 +363,7 @@ class Auction(BaseComponent):
                 else:
                     # Return the set aside money to the buyer
                     amount = world.agents[bid["buyer"]].escrow_to_inventory(
-                        "Token", bid["bid"]
+                        "TOK", bid["bid"]
                     )
                     assert amount == bid["bid"]
                     # Adjust the bid histogram to reflect the removal of the bid
@@ -547,7 +547,7 @@ class Auction(BaseComponent):
         for agent in world.agents:
             masks[agent.idx] = {}
 
-            can_pay = np.arange(self.max_bid_ask + 1) <= agent.inventory["Token"]
+            can_pay = np.arange(self.max_bid_ask + 1) <= agent.inventory["TOK"]
 
             for resource in self.commodities:
                 if not self.can_ask(resource, agent):  # asks_maxed:

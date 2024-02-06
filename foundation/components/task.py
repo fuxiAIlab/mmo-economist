@@ -26,7 +26,7 @@ class Task(BaseComponent):
 
     name = "Task"
     component_type = "Production"
-    required_entities = ["Token", "Exp", "Mat", "Labor"]
+    required_entities = ["TOK", "EXP", "MAT", "LAB"]
     agent_subclasses = ["BasicPlayer"]
 
     def __init__(
@@ -118,7 +118,7 @@ class Task(BaseComponent):
 
                 # If the player did move, incur the labor cost of moving
                 if (new_r != r) or (new_c != c):
-                    agent.state["endogenous"]["Labor"] += self.move_labor
+                    agent.state["endogenous"]["LAB"] += self.move_labor
 
             else:
                 raise ValueError
@@ -130,7 +130,7 @@ class Task(BaseComponent):
                     world.consume_resource(resource, new_r, new_c)
 
                     # Incur the labor cost of collecting a resource
-                    agent.state["endogenous"]["Labor"] += self.collect_labor
+                    agent.state["endogenous"]["LAB"] += self.collect_labor
 
                     # Log the task
                     tasks.append(
