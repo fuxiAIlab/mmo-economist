@@ -290,7 +290,7 @@ class BaseEnvironment(ABC):
         self._entities = {
             "resources": [],
             "landmarks": [],
-            "endogenous": ["Labor"],
+            "endogenous": [],
         }
         self._register_entities(self.required_entities)
 

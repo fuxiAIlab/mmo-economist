@@ -36,7 +36,7 @@ endogenous_registry = Registry(Endogenous)
 class LAB(Endogenous):
     """LAB (labor) accumulated through all behaviors. Included in all environments by default."""
 
-    name = "Labor"
+    name = "LAB"
 
 
 @endogenous_registry.add
