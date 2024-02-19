@@ -165,7 +165,7 @@ class P2WEnvironment(BaseEnvironment):
     def last_p2w_setting(self):
         return self._last_p2w_setting
 
-    # 初始化地图
+    # Initialize the map layout
     def init_map_layout(self):
         self._p2w_setting = {
             k: (
@@ -198,7 +198,7 @@ class P2WEnvironment(BaseEnvironment):
             self.world.maps.set(str(k) + "SourceBlock", v_)
         return _source_maps
 
-    # 初始化人设
+    # Initialize the agent's personality
     def init_agent_personality(self):
         # Initialize the agent's monetary and nonmonetary utility cost sensitivity
         if self._player_monetary_cost_dist == "pareto":
@@ -237,7 +237,7 @@ class P2WEnvironment(BaseEnvironment):
                 ],
             )
 
-    # 初始化投放
+    # Initialize the p2w setting
     def init_p2w_setting(self):
         self._periods = 0
         self._steps_in_period = 0
@@ -653,7 +653,7 @@ class P2WEnvironment(BaseEnvironment):
                     for k, v in self._curr_p2w_adjust.items()
                 }
             elif self._adjust_type == "planner":
-                # AI动态投放
+                # AI Game Designer
                 self._last_p2w_adjust = deepcopy(self._curr_p2w_adjust)
                 self._curr_p2w_adjust = self.get_component("Adjust").curr_adjust
                 self._curr_p2w_setting = {
