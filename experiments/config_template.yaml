@@ -32,7 +32,7 @@ env:
   - Adjust:
       is_biadjust: true
       adjust_period: 50
-      adjust_rate_max: 0.2
+      adjust_rate_max: 0.3
       adjust_rate_min: 0.0
       adjust_rate_bin: 0.1 
   isoelastic_eta: 0.23
@@ -59,9 +59,9 @@ env:
   player_nonmonetary_cost_dist: normal
   player_utility_income_fxrate: 1.0
   initial_p2w_setting:
-    Exp: 100
-    Mat: 100
-    Token: 100 
+    EXP: 100
+    MAT: 100
+    TOK: 100 
   normal_wear_and_tear_rate: 0.05
   timesteps_for_force_refresh: 500
   adjust_type: planner
