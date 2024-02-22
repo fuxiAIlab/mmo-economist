@@ -42,7 +42,7 @@ class P2WEnvironment(BaseEnvironment):
         player_monetary_cost_dist="pareto",
         player_nonmonetary_cost_dist="normal",
         player_utility_income_fxrate=1.0,
-        planner_reward_type="utility1",
+        planner_reward_type="utility2_norm",
         mixing_weight_e_vs_p=0.0,
         **base_env_kwargs,
     ):
@@ -101,9 +101,6 @@ class P2WEnvironment(BaseEnvironment):
         assert self.energy_warmup_constant >= 0
         self._auto_warmup_integrator = 0
 
-        # Which social welfare function to use
-        # self.planner_reward_type = str(planner_reward_type).lower()
-
         # How much to weight equality if using SWF=eq*prod:
         # 0 -> SWF=eq*prod
         # 1 -> SWF=prod
@@ -121,11 +118,14 @@ class P2WEnvironment(BaseEnvironment):
         assert self._player_monetary_cost_dist in ["pareto", "normal"]
         assert self._player_nonmonetary_cost_dist in ["pareto", "normal"]
 
+        # Initialize the agent's personality
         self.init_agent_personality()
 
+        # The exchange rate of the player's utility income to the currency
         self._player_utility_income_fxrate = player_utility_income_fxrate
         assert isinstance(adjust_type, str)
 
+        # The type of adjustment for the p2w setting
         self._adjust_type = adjust_type.lower()
         assert self._adjust_type in [
             "none",
@@ -145,7 +145,9 @@ class P2WEnvironment(BaseEnvironment):
         self._max_capability_in_last_period = {
             str(agent.idx): 0 for agent in self.world.agents
         }
-        self.planner_reward_type = planner_reward_type
+
+        # The type of reward for the planner
+        self.planner_reward_type = str(planner_reward_type).lower()
         assert self.planner_reward_type in [
             "utility1",
             "utility1_norm",
