@@ -1,9 +1,9 @@
-#python 3.7
-tensorflow==1.14.0 #from conda
-gym==0.20.0
-ray==0.8.4
+# Python 3.8.16
+gym==0.21
+tensorflow==1.14
+ray[rllib]==0.8.4
+importlib-metadata==4.13.0
 pyyaml
 matplotlib
 pandas
-'ray[rllib]'
 IPython
