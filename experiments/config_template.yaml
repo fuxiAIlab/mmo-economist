@@ -1,0 +1,156 @@
+# SPDX-FileCopyrightText: 2024 by NetEase, Inc., All Rights Reserved.
+# SPDX-License-Identifier: BSD-3-Clause
+
+# Copyright (c) 2021, salesforce.com, inc.
+# All rights reserved.
+# SPDX-License-Identifier: BSD-3-Clause
+# For full license text, see the LICENSE file in the repo root
+# or https://opensource.org/licenses/BSD-3-Clause
+
+env:
+  scenario_name: scenarios/p2w
+  components:
+  - Task:
+      move_labor: 1.0
+      collect_labor: 1.0
+      skill_dist: none
+  - Upgrade:
+      upgrade_income: 1.0
+      upgrade_labor: 1.0
+      payment_max_skill_multiplier: 1
+      skill_dist: none
+  - Recharge:
+      recharge_income: 10
+      recharge_labor: 1.0
+  - Shop:
+      shop_labor: 1.0
+  - Auction:
+      max_bid_ask: 10
+      max_num_orders: 5
+      order_duration: 50
+      order_labor: 1.0
+  - Adjust:
+      is_biadjust: true
+      adjust_period: 50
+      adjust_rate_max: 0.2
+      adjust_rate_min: 0.0
+      adjust_rate_bin: 0.1 
+  isoelastic_eta: 0.23
+  energy_cost: 0.21
+  energy_warmup_constant: 10000
+  energy_warmup_method: auto
+  episode_length: 1000
+  dense_log_frequency: 50
+  flatten_masks: true
+  flatten_observations: true
+  multi_action_mode_agents: false
+  multi_action_mode_planner: true
+  world_size:
+  - 30
+  - 30
+  n_agents: 10
+  planner_gets_spatial_info: true 
+  full_observability: false
+  player_observation_range: 5
+  allow_observation_scaling: true
+  starting_player_token: 0
+  starting_player_currency: 100
+  player_monetary_cost_dist: pareto 
+  player_nonmonetary_cost_dist: normal
+  player_utility_income_fxrate: 1.0
+  initial_p2w_setting:
+    Exp: 100
+    Mat: 100
+    Token: 100 
+  normal_wear_and_tear_rate: 0.05
+  timesteps_for_force_refresh: 500
+  adjust_type: planner
+general:
+# not used, deprecated config        
+#  ckpt_frequency_steps: 750000
+#  cpus: 6
+#  episodes: 10
+#  gpus: 0
+#  restore_tf_weights_agents: ''
+#  restore_tf_weights_planner: ''
+  train_planner: true
+agent_policy:
+  clip_param: 0.3
+  entropy_coeff: 0.025
+  entropy_coeff_schedule: null
+  gamma: 0.998
+  grad_clip: 10.0
+  kl_coeff: 0.0
+  kl_target: 0.01
+  lambda: 0.98
+  lr: 0.0003
+  lr_schedule: null
+  model:
+    custom_model: keras_conv_lstm
+    custom_options:
+      fc_dim: 128
+      idx_emb_dim: 4
+      input_emb_vocab: 100
+      lstm_cell_size: 128
+      num_conv: 2
+      num_fc: 2
+    max_seq_len: 25
+  use_gae: true
+  vf_clip_param: 50.0
+  vf_loss_coeff: 0.05
+  vf_share_layers: false  
+planner_policy:
+  clip_param: 0.3
+  entropy_coeff: 0.025
+  entropy_coeff_schedule: null
+  gamma: 0.998
+  grad_clip: 10.0
+  kl_coeff: 0.0
+  kl_target: 0.01
+  lambda: 0.98
+  lr: 0.0003
+  lr_schedule: null
+  model:
+    custom_model: keras_conv_lstm
+    custom_options:
+      fc_dim: 256
+      idx_emb_dim: 4
+      input_emb_vocab: 100
+      lstm_cell_size: 256
+      num_conv: 2
+      num_fc: 2
+    max_seq_len: 25
+  use_gae: true
+  vf_clip_param: 50.0
+  vf_loss_coeff: 0.05
+  vf_share_layers: false
+trainer:
+  batch_mode: truncate_episodes
+  env_config: null
+  local_tf_session_args:
+    inter_op_parallelism_threads: 2
+    intra_op_parallelism_threads: 4
+  metrics_smoothing_episodes: null
+  multiagent: null
+  no_done_at_end: false
+  num_envs_per_worker: 1
+  num_gpus: 0
+  num_gpus_per_worker: 0
+  num_sgd_iter: 1
+  num_workers: 8 
+  observation_filter: NoFilter
+  rollout_fragment_length: 200
+  seed: null
+  sgd_minibatch_size: 1500
+  shuffle_sequences: true
+  tf_session_args:
+    allow_soft_placement: true
+    device_count:
+      CPU: 4
+      GPU: 0
+    gpu_options:
+      allow_growth: true
+    inter_op_parallelism_threads: 2
+    intra_op_parallelism_threads: 4 
+    log_device_placement: false
+  train_batch_size: 6000
