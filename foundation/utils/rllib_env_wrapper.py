@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2024 by NetEase, Inc., All Rights Reserved.
+# SPDX-License-Identifier: BSD-3-Clause
+
 # Copyright (c) 2021, salesforce.com, inc.
 # All rights reserved.
 # SPDX-License-Identifier: BSD-3-Clause
@@ -15,12 +18,11 @@ import random
 import warnings
 
 import numpy as np
-from foundation.scenarios.utils import social_metrics
-import foundation
-
 from gym import spaces
 from gym.utils import seeding
 from ray.rllib.env.multi_agent_env import MultiAgentEnv
+
+import foundation
 
 _BIG_NUMBER = 1e20
 
@@ -62,8 +64,7 @@ class RLlibEnvWrapper(MultiAgentEnv):
         # Adding env id in the case of multiple environments
         if hasattr(env_config, "worker_index"):
             self.env_id = (
-                env_config["num_envs_per_worker"] *
-                (env_config.worker_index - 1)
+                env_config["num_envs_per_worker"] * (env_config.worker_index - 1)
             ) + env_config.vector_index
         else:
             self.env_id = None
@@ -95,8 +96,7 @@ class RLlibEnvWrapper(MultiAgentEnv):
                 self.env.get_agent("p").action_spaces
             )
             self.action_space_pl.dtype = np.int64
-            self.action_space_pl.nvec = self.action_space_pl.nvec.astype(
-                np.int64)
+            self.action_space_pl.nvec = self.action_space_pl.nvec.astype(np.int64)
 
         else:
             self.action_space_pl = spaces.Discrete(
@@ -117,7 +117,6 @@ class RLlibEnvWrapper(MultiAgentEnv):
     def _dict_to_spaces_dict(self, obs):
         dict_of_spaces = {}
         for k, v in obs.items():
-
             # list of lists are listified np arrays
             _v = v
             if isinstance(v, list):
@@ -133,17 +132,14 @@ class RLlibEnvWrapper(MultiAgentEnv):
                     warnings.warn("Input is too large!")
                 if np.min(_v) < -x:
                     warnings.warn("Input is too small!")
-                box = spaces.Box(
-                    low=-x, high=x, shape=_v.shape, dtype=_v.dtype)
+                box = spaces.Box(low=-x, high=x, shape=_v.shape, dtype=_v.dtype)
                 low_high_valid = (box.low < 0).all() and (box.high > 0).all()
 
                 # This loop avoids issues with overflow to make sure low/high are good.
                 while not low_high_valid:
                     x = x // 2
-                    box = spaces.Box(
-                        low=-x, high=x, shape=_v.shape, dtype=_v.dtype)
-                    low_high_valid = (box.low < 0).all() and (
-                        box.high > 0).all()
+                    box = spaces.Box(low=-x, high=x, shape=_v.shape, dtype=_v.dtype)
+                    low_high_valid = (box.low < 0).all() and (box.high > 0).all()
 
                 dict_of_spaces[k] = box
 
@@ -193,7 +189,7 @@ class RLlibEnvWrapper(MultiAgentEnv):
         # Derive a random seed. This gets passed as an uint, but gets
         # checked as an int elsewhere, so we need to keep it below
         # 2**31.
-        seed2 = seeding.hash_seed(seed1 + 1) % 2 ** 31
+        seed2 = seeding.hash_seed(seed1 + 1) % 2**31
 
         if self.verbose:
             print(
@@ -212,27 +208,27 @@ class RLlibEnvWrapper(MultiAgentEnv):
         return recursive_list_to_np_array(obs)
 
     def step(self, action_dict):
-
         obs, rew, done, info = self.env.step(action_dict)
 
-        info={k: {'res':np.array([-1.0,-1.0,-1.0]),"training_enabled":True} for k in action_dict.keys()}
-        if self.env._steps_in_period==0:
-            metrics=self.env.scenario_metrics()
-            profit,equality,capability=metrics['social/profitability'],\
-                                      metrics['social/equality'],\
-                                      metrics['social/capability_avg']
-            info['p']['res'] = np.array([profit, equality, capability])
+        info = {
+            k: {"res": np.array([-1.0, -1.0, -1.0]), "training_enabled": True}
+            for k in action_dict.keys()
+        }
+        if self.env._steps_in_period == 0:
+            metrics = self.env.scenario_metrics()
+            profit, equality, capability = (
+                metrics["social/profitability"],
+                metrics["social/equality"],
+                metrics["social/capability_avg"],
+            )
+            info["p"]["res"] = np.array([profit, equality, capability])
         else:
             metrics = self.env.scenario_metrics()
-            profit, equality, capability = metrics['social/profitability'], \
-                                           metrics['social/equality'], \
-                                           metrics['social/capability_avg']
-            # capability_endowments=np.array(
-            #     [agent.endogenous['Capability'] for agent in self.env.world.agents])
-            # equality = social_metrics.get_equality(
-            # capability_endowments)
-            info['p']['res'] = np.array([-1.0, equality, capability])
+            profit, equality, capability = (
+                metrics["social/profitability"],
+                metrics["social/equality"],
+                metrics["social/capability_avg"],
+            )
+            info["p"]["res"] = np.array([-1.0, equality, capability])
 
-        # assert isinstance(obs[self.sample_agent_idx]
-        #                   ["action_mask"], np.ndarray)
         return recursive_list_to_np_array(obs), rew, done, info
