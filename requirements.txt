@@ -1,8 +1,10 @@
-# Python 3.8.16
-gym==0.21
-tensorflow==1.14
+ray==0.8.4
+ray[tune]==0.8.4
 ray[rllib]==0.8.4
+gym==0.21
+tensorflow==1.14.0
 importlib-metadata==4.13.0
+protobuf==3.20.1
 pyyaml
 matplotlib
 pandas
