@@ -15,7 +15,7 @@ env:
       collect_labor: 1.0
       skill_dist: none
   - Upgrade:
-      upgrade_income: 2.0
+      upgrade_income: 10.0
       upgrade_labor: 1.0
       payment_max_skill_multiplier: 1
       skill_dist: none
@@ -57,7 +57,7 @@ env:
   starting_player_currency: 200
   player_monetary_cost_dist: pareto 
   player_nonmonetary_cost_dist: normal
-  player_utility_income_fxrate: 1.0
+  player_utility_income_fxrate: 0.2
   initial_p2w_setting:
     EXP: 80
     MAT: 80
@@ -140,9 +140,9 @@ trainer:
   num_sgd_iter: 2
   num_workers: 8 
   observation_filter: NoFilter
-  rollout_fragment_length: 600 #200
+  rollout_fragment_length: 600
   seed: null
-  sgd_minibatch_size: 2000 #1500
+  sgd_minibatch_size: 2000
   shuffle_sequences: true
   tf_session_args:
     allow_soft_placement: true
@@ -154,4 +154,4 @@ trainer:
     inter_op_parallelism_threads: 2
     intra_op_parallelism_threads: 4 
     log_device_placement: false
-  train_batch_size: 8000 # 6000
+  train_batch_size: 8000
