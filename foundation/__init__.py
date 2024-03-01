@@ -9,6 +9,7 @@ from foundation.components import component_registry as components
 from foundation.entities import endogenous_registry as endogenous
 from foundation.entities import landmark_registry as landmarks
 from foundation.entities import resource_registry as resources
+from foundation.models import tf_models as models
 from foundation.scenarios import scenario_registry as scenarios
 
 

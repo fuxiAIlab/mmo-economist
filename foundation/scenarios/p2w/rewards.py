@@ -113,7 +113,9 @@ def isoelastic_utility_for_player(
 
 def utility_for_planner(monetary_incomes, nonmonetary_incomes, equality_weight):
     n_agents = len(monetary_incomes)
+    # ARPU
     profitability = get_profitability(monetary_incomes) / n_agents
+    # Gini index
     equality = equality_weight * get_equality(nonmonetary_incomes) + (
         1 - equality_weight
     )
@@ -122,9 +124,9 @@ def utility_for_planner(monetary_incomes, nonmonetary_incomes, equality_weight):
 
 def utility2_for_planner(monetary_incomes, nonmonetary_incomes, equality_weight):
     n_agents = len(monetary_incomes)
-    # 人均付费 ARPU
+    # ARPU
     profitability = get_profitability(monetary_incomes) / n_agents
-    # 人均公平性加权战力（人均战力*公平性）
+    # Gini index weighted average of nonmonetary incomes
     equality = (
         equality_weight * get_equality(nonmonetary_incomes) + (1 - equality_weight)
     ) * (np.sum(nonmonetary_incomes) / n_agents)
@@ -135,9 +137,11 @@ def utility_normalized_for_planner(
     monetary_incomes, exp_monetary_incomes, nonmonetary_incomes, equality_weight
 ):
     n_agents = len(monetary_incomes)
+    # ARPU / expected ARPU
     profitability = (
         get_profitability(monetary_incomes) / n_agents / exp_monetary_incomes
     )
+    # Gini index
     equality = equality_weight * get_equality(nonmonetary_incomes) + (
         1 - equality_weight
     )
@@ -152,11 +156,11 @@ def utility2_normalized_for_planner(
     equality_weight,
 ):
     n_agents = len(monetary_incomes)
-    # 人均付费 ARPU / 期望人均付费 exp ARPU
+    # ARPU / expected ARPU
     profitability = (
         get_profitability(monetary_incomes) / n_agents / exp_monetary_incomes
     )
-    # 人均公平性加权战力（人均战力*公平性）/ 期望人均战力
+    # Gini index weighted average of nonmonetary incomes / expected nonmonetary incomes
     equality = (
         (equality_weight * get_equality(nonmonetary_incomes) + (1 - equality_weight))
         * (np.sum(nonmonetary_incomes) / n_agents)

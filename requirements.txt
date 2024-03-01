@@ -1,9 +1,11 @@
-#python 3.7
-tensorflow==1.14.0 #from conda
-gym==0.20.0
 ray==0.8.4
+ray[tune]==0.8.4
+ray[rllib]==0.8.4
+gym==0.21
+tensorflow==1.14.0
+importlib-metadata==4.13.0
+protobuf==3.20.1
 pyyaml
 matplotlib
 pandas
-'ray[rllib]'
 IPython
