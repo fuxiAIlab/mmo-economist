@@ -1,7 +1,7 @@
 # The MMO Economist: AI Empowers Robust, Healthy, and Sustainable P2W MMO Economies
 [![DOI](https://zenodo.org/badge/679947564.svg)](https://zenodo.org/doi/10.5281/zenodo.10795719)
 
-This repo is the official implementation of The MMO Economist. 
+This repo is the official implementation of The MMO Economist [[paper]](https://dl.acm.org/doi/10.1145/3589335.3648344). 
 The MMO Economist is an economic simulation environment that facilitates the correspondence between real-world economic systems and their virtual counterparts for authentic and realistic assessments of MMO (Massively Multiplayer Online Game) economic evolution.
 
 ## Requirements
